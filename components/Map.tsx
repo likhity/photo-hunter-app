@@ -1,5 +1,6 @@
 import Mapbox, {
   Camera,
+  CircleLayer,
   Images,
   LocationPuck,
   MapView,
@@ -18,16 +19,29 @@ export default function Map() {
 
   return (
     <MapView style={{ flex: 1 }} styleURL="mapbox://styles/mapbox/dark-v11">
-      <Camera followUserLocation followZoomLevel={15} />
+      <Camera followUserLocation followZoomLevel={10} />
       <LocationPuck puckBearing="heading" puckBearingEnabled pulsing={{ isEnabled: true }} />
 
-      <ShapeSource id="photohunts" shape={featureCollection(points)}>
+      <ShapeSource id="photohunts" cluster shape={featureCollection(points)}>
+        <CircleLayer
+          id="clusters"
+          filter={['has', 'point_count']}
+          style={{
+            circleColor: '#E14545',
+            circleRadius: 20,
+            circleOpacity: 0.5,
+            circleStrokeWidth: 2,
+            circleStrokeColor: 'white',
+          }}
+        />
         <SymbolLayer
-          id="photohunter-icons"
+          id="photohunt-icons"
+          filter={['!', ['has', 'point_count']]}
           style={{
             iconImage: 'pin',
             iconSize: 0.3,
             iconAllowOverlap: true,
+            iconAnchor: 'bottom',
           }}
         />
         <Images images={{ pin }} />
