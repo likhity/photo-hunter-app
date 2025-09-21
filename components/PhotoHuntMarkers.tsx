@@ -2,16 +2,21 @@ import { ShapeSource, SymbolLayer, Images, CircleLayer } from '@rnmapbox/maps';
 import { OnPressEvent } from '@rnmapbox/maps/lib/typescript/src/types/OnPressEvent';
 import { featureCollection, point } from '@turf/helpers';
 
+import pinHunted from '~/assets/photohunt-icon-green.png';
 import pin from '~/assets/photohunt-icon.png';
-import photohunts from '~/data/photohunts.json';
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 
 export default function PhotoHuntMarkers() {
-  const { setSelectedPhotoHunt } = usePhotoHunt();
+  const { photoHunts, setSelectedPhotoHunt } = usePhotoHunt();
 
-  const points = photohunts.map((photohunt: any) =>
-    point([photohunt.long, photohunt.lat], { photohunt })
-  );
+  // Separate hunted and non-hunted locations
+  const huntedPoints = photoHunts
+    .filter((photohunt) => photohunt.hunted)
+    .map((photohunt) => point([photohunt.long, photohunt.lat], { photohunt }));
+
+  const nonHuntedPoints = photoHunts
+    .filter((photohunt) => !photohunt.hunted)
+    .map((photohunt) => point([photohunt.long, photohunt.lat], { photohunt }));
 
   const onPointPress = async (event: OnPressEvent) => {
     if (event.features[0].properties?.photohunt) {
@@ -20,29 +25,66 @@ export default function PhotoHuntMarkers() {
   };
 
   return (
-    <ShapeSource id="photohunts" cluster shape={featureCollection(points)} onPress={onPointPress}>
-      <CircleLayer
-        id="clusters"
-        filter={['has', 'point_count']}
-        style={{
-          circleColor: '#E14545',
-          circleRadius: 20,
-          circleOpacity: 0.5,
-          circleStrokeWidth: 2,
-          circleStrokeColor: 'white',
-        }}
-      />
-      <SymbolLayer
-        id="photohunt-icons"
-        filter={['!', ['has', 'point_count']]}
-        style={{
-          iconImage: 'pin',
-          iconSize: 0.3,
-          iconAllowOverlap: true,
-          iconAnchor: 'bottom',
-        }}
-      />
-      <Images images={{ pin }} />
-    </ShapeSource>
+    <>
+      {/* Non-hunted locations */}
+      <ShapeSource
+        id="non-hunted-photohunts"
+        cluster
+        shape={featureCollection(nonHuntedPoints)}
+        onPress={onPointPress}>
+        <CircleLayer
+          id="non-hunted-clusters"
+          filter={['has', 'point_count']}
+          style={{
+            circleColor: '#E14545',
+            circleRadius: 20,
+            circleOpacity: 0.5,
+            circleStrokeWidth: 2,
+            circleStrokeColor: 'white',
+          }}
+        />
+        <SymbolLayer
+          id="non-hunted-icons"
+          filter={['!', ['has', 'point_count']]}
+          style={{
+            iconImage: 'pin',
+            iconSize: 0.08,
+            iconAllowOverlap: true,
+            iconAnchor: 'bottom',
+          }}
+        />
+      </ShapeSource>
+
+      {/* Hunted locations */}
+      <ShapeSource
+        id="hunted-photohunts"
+        cluster
+        shape={featureCollection(huntedPoints)}
+        onPress={onPointPress}>
+        <CircleLayer
+          id="hunted-clusters"
+          filter={['has', 'point_count']}
+          style={{
+            circleColor: '#E14545',
+            circleRadius: 20,
+            circleOpacity: 0.5,
+            circleStrokeWidth: 2,
+            circleStrokeColor: 'white',
+          }}
+        />
+        <SymbolLayer
+          id="hunted-icons"
+          filter={['!', ['has', 'point_count']]}
+          style={{
+            iconImage: 'pinHunted',
+            iconSize: 0.08,
+            iconAllowOverlap: true,
+            iconAnchor: 'bottom',
+          }}
+        />
+      </ShapeSource>
+
+      <Images images={{ pin, pinHunted }} />
+    </>
   );
 }

@@ -20,6 +20,7 @@ export default function NotFoundScreen() {
 const styles = StyleSheet.create({
   title: {
     fontSize: 20,
+    fontFamily: 'Sen',
     fontWeight: 'bold',
   },
   link: {
@@ -28,6 +29,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
+    fontFamily: 'Sen',
     color: '#2e78b7',
   },
 });

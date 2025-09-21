@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "photo-hunter-app",
+    "name": "PhotoHunter",
     "slug": "photo-hunter-app",
     "version": "1.0.0",
     "scheme": "photo-hunter-app",
@@ -23,21 +23,27 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.photohunterapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.photohunterapp"
+      "package": "com.anonymous.photohunterapp",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
+      ]
     },
     "plugins": [
       "expo-router",
       [
         "@rnmapbox/maps",
         {
-          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoibGlraGl0eSIsImEiOiJjbTR5eHh3MWowbWxkMmpxNmRlbGZiZjh0In0.JA6lOwWcpeTX3OAtEfgnng"
+          "RNMapboxMapsDownloadToken": "$EXPO_PUBLIC_MAPBOX_TOKEN"
         }
       ],
       [
@@ -45,7 +51,20 @@
         {
           "locationWhenInUsePermission": "Show current location on map."
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "The app accesses your camera to let you take reference photos for photo hunts."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "The app accesses your camera to let you take photos for photo hunts."
+        }
+      ],
+      "expo-font"
     ]
   }
 }

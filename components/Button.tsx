@@ -31,6 +31,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   buttonText: {
+    fontFamily: 'Sen',
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
