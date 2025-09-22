@@ -4,6 +4,8 @@ A React Native scavenger hunt app with a Django & PostgreSQL backend similar to 
 
 Will be deployed and available on the App Store and Google Play Store soon.
 
+Backend repo: [https://github.com/likhity/photohunter-backend](https://github.com/likhity/photohunter-backend)
+
 ## Screenshots
 
 <div align="center">
