@@ -1,17 +1,6 @@
 # Photo Hunter App
 
-A React Native app for discovering and photographing interesting locations around Barcelona.
-
-## Features
-
-- **Interactive Map**: Explore photo hunt locations on a beautiful dark-themed map
-- **Location Tracking**: Camera follows your location with smooth animations
-- **Photo Hunt Locations**: 30 carefully selected Barcelona landmarks and attractions
-- **Bottom Sheet UI**: Beautiful red-themed bottom sheet for selected locations
-- **Distance Calculation**: Real-time distance calculation from your current location
-- **Route Planning**: Get directions to selected photo hunt locations
-
-## Components
+A React Native scavenger hunt app with Django & PostgreSQL backend similar to Geocaching where users take photos of specific locations and objects, validated using multi-modal LLMs.
 
 ### Map Component
 
@@ -39,8 +28,7 @@ A React Native app for discovering and photographing interesting locations aroun
 - **TypeScript** for type safety
 - **Mapbox** for mapping functionality
 - **Expo Location** for GPS tracking
-- **@gorhom/bottom-sheet** for smooth bottom sheet UI
-- **Turf.js** for geospatial calculations
+- **@gorhom/bottom-sheet** for beautiful bottom sheet UI
 
 ## Getting Started
 
@@ -66,16 +54,3 @@ A React Native app for discovering and photographing interesting locations aroun
    ```bash
    npm start
    ```
-
-## Photo Hunt Locations
-
-The app includes 30 Barcelona landmarks including:
-
-- Sagrada Familia
-- Park Güell
-- Casa Batlló
-- Las Ramblas
-- Casa Milà
-- And many more!
-
-Each location has a unique description and challenge for photographers.

@@ -35,12 +35,12 @@ export default function Home() {
 
   // Handle authentication redirect
   useEffect(() => {
-    console.log('Main app - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+    // ('Main app - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
     if (!isLoading && !isAuthenticated) {
-      console.log('Redirecting to auth...');
+      // ('Redirecting to auth...');
       router.replace('/auth');
     } else if (!isLoading && isAuthenticated) {
-      console.log('User is authenticated, staying on main app');
+      // ('User is authenticated, staying on main app');
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -91,7 +91,7 @@ export default function Home() {
           animationDuration: 1000,
         });
       } else {
-        console.log('Map ref is null');
+        // ('Map ref is null');
       }
     } catch (error) {
       console.error('Error centering map:', error);

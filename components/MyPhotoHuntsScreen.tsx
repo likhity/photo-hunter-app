@@ -31,21 +31,35 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
   const [myPhotoHunts, setMyPhotoHunts] = useState<PhotoHunt[]>([]);
 
   useEffect(() => {
-    if (user) {
-      // Get user-specific photo hunts
-      const userPhotoHunts = photoHuntService.getUserPhotoHunts(user.id);
-      setMyPhotoHunts(userPhotoHunts);
-    }
+    const fetchUserPhotoHunts = async () => {
+      if (user) {
+        try {
+          // Get user-specific photo hunts
+          const userPhotoHunts = await photoHuntService.getUserPhotoHunts();
+          setMyPhotoHunts(userPhotoHunts);
+        } catch (error) {
+          console.error('Error fetching user PhotoHunts:', error);
+          setMyPhotoHunts([]);
+        }
+      }
+    };
+
+    fetchUserPhotoHunts();
   }, [user]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    refreshPhotoHunts();
-    if (user) {
-      const userPhotoHunts = photoHuntService.getUserPhotoHunts(user.id);
-      setMyPhotoHunts(userPhotoHunts);
+    try {
+      await refreshPhotoHunts();
+      if (user) {
+        const userPhotoHunts = await photoHuntService.getUserPhotoHunts();
+        setMyPhotoHunts(userPhotoHunts);
+      }
+    } catch (error) {
+      console.error('Error refreshing PhotoHunts:', error);
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
   };
 
   const handleDeletePhotoHunt = (photoHunt: PhotoHunt) => {
@@ -108,55 +122,57 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
           </View>
         ) : (
           <View style={styles.photoHuntsList}>
-            {myPhotoHunts.map((photoHunt) => (
-              <View key={photoHunt.id} style={styles.photoHuntCard}>
-                <View style={styles.photoHuntHeader}>
-                  <View style={styles.photoHuntInfo}>
-                    <Text style={styles.photoHuntName}>{photoHunt.name}</Text>
-                    <Text style={styles.photoHuntDescription}>{photoHunt.description}</Text>
-                    <Text style={styles.photoHuntDate}>
-                      Created on {formatDate(photoHunt.createdAt)}
-                    </Text>
-                  </View>
-                  <View style={styles.photoHuntStatus}>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: photoHunt.hunted ? '#10B981' : '#F59E0B' },
-                      ]}>
-                      <Text style={styles.statusText}>
-                        {photoHunt.hunted ? 'Hunted' : 'Active'}
+            {myPhotoHunts &&
+              Array.isArray(myPhotoHunts) &&
+              myPhotoHunts.map((photoHunt) => (
+                <View key={photoHunt.id} style={styles.photoHuntCard}>
+                  <View style={styles.photoHuntHeader}>
+                    <View style={styles.photoHuntInfo}>
+                      <Text style={styles.photoHuntName}>{photoHunt.name}</Text>
+                      <Text style={styles.photoHuntDescription}>{photoHunt.description}</Text>
+                      <Text style={styles.photoHuntDate}>
+                        Created on {formatDate(photoHunt.created_at)}
                       </Text>
                     </View>
+                    <View style={styles.photoHuntStatus}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: photoHunt.hunted ? '#10B981' : '#F59E0B' },
+                        ]}>
+                        <Text style={styles.statusText}>
+                          {photoHunt.hunted ? 'Hunted' : 'Active'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {photoHunt.reference_image && (
+                    <View style={styles.referenceImageContainer}>
+                      <Image
+                        source={{ uri: photoHunt.reference_image }}
+                        style={styles.referenceImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  )}
+
+                  <View style={styles.photoHuntActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleEditPhotoHunt(photoHunt)}>
+                      <MaterialIcons name="edit" size={20} color="#6B7280" />
+                      <Text style={styles.actionText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={() => handleDeletePhotoHunt(photoHunt)}>
+                      <MaterialIcons name="delete" size={20} color="#DC2626" />
+                      <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-
-                {photoHunt.referenceImage && (
-                  <View style={styles.referenceImageContainer}>
-                    <Image
-                      source={{ uri: photoHunt.referenceImage }}
-                      style={styles.referenceImage}
-                      resizeMode="cover"
-                    />
-                  </View>
-                )}
-
-                <View style={styles.photoHuntActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleEditPhotoHunt(photoHunt)}>
-                    <MaterialIcons name="edit" size={20} color="#6B7280" />
-                    <Text style={styles.actionText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.deleteButton]}
-                    onPress={() => handleDeletePhotoHunt(photoHunt)}>
-                    <MaterialIcons name="delete" size={20} color="#DC2626" />
-                    <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+              ))}
           </View>
         )}
       </ScrollView>

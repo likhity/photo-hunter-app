@@ -9,12 +9,16 @@ import {
   Animated,
   Easing,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { usePhotoValidation } from '~/hooks/usePhotoValidation';
+import { PhotoValidationResult } from '~/services/photoValidationService';
 
 interface PhotoValidationScreenProps {
   photoUri: string;
+  photoHuntId: string;
   photoHuntName: string;
-  onValidationComplete: (success: boolean) => void;
+  onValidationComplete: (success: boolean, result?: PhotoValidationResult) => void;
   onRetry: () => void;
 }
 
@@ -22,6 +26,7 @@ const { height } = Dimensions.get('window');
 
 export default function PhotoValidationScreen({
   photoUri,
+  photoHuntId,
   photoHuntName,
   onValidationComplete,
   onRetry,
@@ -30,8 +35,11 @@ export default function PhotoValidationScreen({
     'validating'
   );
   const [progress, setProgress] = useState(0);
+  const [validationResult, setValidationResult] = useState<PhotoValidationResult | null>(null);
   const spinValue = new Animated.Value(0);
   const scaleValue = new Animated.Value(1);
+
+  const { validatePhoto, isValidating, error } = usePhotoValidation();
 
   useEffect(() => {
     // Start validation process
@@ -39,36 +47,52 @@ export default function PhotoValidationScreen({
   }, []);
 
   const startValidation = async () => {
-    // Simulate API call with progress updates
-    const duration = 2000; // 2 seconds
-    const interval = 100; // Update every 100ms
-    const totalSteps = duration / interval;
-    let currentStep = 0;
+    try {
+      // Start spinning animation
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
 
-    const progressInterval = setInterval(() => {
-      currentStep++;
-      const newProgress = (currentStep / totalSteps) * 100;
-      setProgress(newProgress);
+      // Simulate progress updates
+      const duration = 3000; // 3 seconds for real API call
+      const interval = 100; // Update every 100ms
+      const totalSteps = duration / interval;
+      let currentStep = 0;
 
-      if (currentStep >= totalSteps) {
-        clearInterval(progressInterval);
-        // Simulate API response (90% success rate for demo)
-        const success = Math.random() > 0.1;
-        setValidationStatus(success ? 'success' : 'failed');
+      const progressInterval = setInterval(() => {
+        currentStep++;
+        const newProgress = (currentStep / totalSteps) * 100;
+        setProgress(newProgress);
 
-        // Don't auto-proceed, wait for user to click Proceed button
+        if (currentStep >= totalSteps) {
+          clearInterval(progressInterval);
+        }
+      }, interval);
+
+      // Submit photo for validation
+      const result = await validatePhoto(photoHuntId, 'camera');
+      setValidationResult(result);
+
+      // Clear progress interval
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      // Determine validation status based on result
+      if (result.isValid) {
+        setValidationStatus('success');
+      } else {
+        setValidationStatus('failed');
       }
-    }, interval);
-
-    // Start spinning animation
-    Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
+    } catch (err: any) {
+      console.error('Validation error:', err);
+      setValidationStatus('failed');
+      Alert.alert('Validation Error', err.message || 'Failed to validate photo');
+    }
   };
 
   const getStatusIcon = () => {
@@ -104,10 +128,20 @@ export default function PhotoValidationScreen({
       case 'success':
         return `You've successfully hunted\n"${photoHuntName}".`;
       case 'failed':
-        return "The photo doesn't match the reference image. Please try taking another photo.";
+        return (
+          validationResult?.notes ||
+          "The photo doesn't match the reference image. Please try taking another photo."
+        );
       default:
         return 'Validating your photo...';
     }
+  };
+
+  const getValidationDetails = () => {
+    if (validationResult) {
+      return `Similarity: ${Math.round(validationResult.similarityScore * 100)}% | Confidence: ${Math.round(validationResult.confidenceScore * 100)}%`;
+    }
+    return '';
   };
 
   return (
@@ -155,6 +189,11 @@ export default function PhotoValidationScreen({
           <Text style={styles.statusTitle}>{getStatusTitle()}</Text>
           <Text style={styles.statusMessage}>{getStatusMessage()}</Text>
 
+          {/* Validation Details */}
+          {validationResult && validationStatus !== 'validating' && (
+            <Text style={styles.validationDetails}>{getValidationDetails()}</Text>
+          )}
+
           {/* Progress Bar */}
           {validationStatus === 'validating' && (
             <View style={styles.progressContainer}>
@@ -178,7 +217,7 @@ export default function PhotoValidationScreen({
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.proceedButton}
-                onPress={() => onValidationComplete(true)}>
+                onPress={() => onValidationComplete(true, validationResult || undefined)}>
                 <Text style={styles.proceedButtonText}>Proceed</Text>
               </TouchableOpacity>
             </View>
@@ -275,6 +314,14 @@ const styles = StyleSheet.create({
     color: '#ccc',
     fontSize: 14,
     fontFamily: 'Sen',
+  },
+  validationDetails: {
+    color: '#999',
+    fontSize: 14,
+    fontFamily: 'Sen',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 20,
   },
   actionButtons: {
     flexDirection: 'row',

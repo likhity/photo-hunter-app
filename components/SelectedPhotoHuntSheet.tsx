@@ -20,7 +20,7 @@ import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 import { calculateDistance, formatDistance } from '~/utils/distance';
 
 export default function SelectedPhotoHuntSheet() {
-  const { selectedPhotoHunt, setSelectedPhotoHunt, markPhotoHuntAsHunted } = usePhotoHunt();
+  const { selectedPhotoHunt, setSelectedPhotoHunt } = usePhotoHunt();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [distance, setDistance] = useState<string>('');
   const [showCamera, setShowCamera] = useState(false);
@@ -49,8 +49,8 @@ export default function SelectedPhotoHuntSheet() {
       const distKm = calculateDistance(
         location.coords.latitude,
         location.coords.longitude,
-        selectedPhotoHunt.lat,
-        selectedPhotoHunt.long
+        selectedPhotoHunt.latitude,
+        selectedPhotoHunt.longitude
       );
       setDistance(formatDistance(distKm));
     } catch (error) {
@@ -73,15 +73,15 @@ export default function SelectedPhotoHuntSheet() {
       const currentDistanceKm = calculateDistance(
         location.coords.latitude,
         location.coords.longitude,
-        selectedPhotoHunt.lat,
-        selectedPhotoHunt.long
+        selectedPhotoHunt.latitude,
+        selectedPhotoHunt.longitude
       );
 
       const currentDistanceMeters = currentDistanceKm * 1000; // Convert km to meters
 
-      console.log('Current distance:', currentDistanceMeters, 'meters');
-      console.log('Photo hunt location:', selectedPhotoHunt.lat, selectedPhotoHunt.long);
-      console.log('User location:', location.coords.latitude, location.coords.longitude);
+      // ('Current distance:', currentDistanceMeters, 'meters');
+      // ('Photo hunt location:', selectedPhotoHunt.lat, selectedPhotoHunt.long);
+      // ('User location:', location.coords.latitude, location.coords.longitude);
 
       // Check if user is within 50 meters of the photo hunt location
       if (currentDistanceMeters > 50) {
@@ -110,7 +110,6 @@ export default function SelectedPhotoHuntSheet() {
     setShowValidation(false);
 
     if (success && selectedPhotoHunt) {
-      markPhotoHuntAsHunted(selectedPhotoHunt.id);
       Alert.alert(
         'Success!',
         `Congratulations! You've completed the "${selectedPhotoHunt.name}" photo hunt!`,
@@ -138,17 +137,17 @@ export default function SelectedPhotoHuntSheet() {
   const openInAppleMaps = () => {
     if (!selectedPhotoHunt) return;
 
-    const { lat, long, name } = selectedPhotoHunt;
+    const { latitude, longitude, name } = selectedPhotoHunt;
     const encodedName = encodeURIComponent(name);
-    const url = `http://maps.apple.com/?q=${encodedName}&ll=${lat},${long}`;
+    const url = `http://maps.apple.com/?q=${encodedName}&ll=${latitude},${longitude}`;
     Linking.openURL(url);
   };
 
   const openInGoogleMaps = () => {
     if (!selectedPhotoHunt) return;
 
-    const { lat, long } = selectedPhotoHunt;
-    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`;
+    const { latitude, longitude } = selectedPhotoHunt;
+    const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
     Linking.openURL(url);
   };
 
@@ -168,6 +167,7 @@ export default function SelectedPhotoHuntSheet() {
     return (
       <PhotoValidationScreen
         photoUri={capturedPhotoUri}
+        photoHuntId={selectedPhotoHunt.id}
         photoHuntName={selectedPhotoHunt.name}
         onValidationComplete={handleValidationComplete}
         onRetry={handleRetryPhoto}

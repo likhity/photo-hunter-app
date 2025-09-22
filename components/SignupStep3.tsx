@@ -40,8 +40,8 @@ export default function SignupStep3({ onBack, onComplete, name, email }: SignupS
       setError('Please enter a password');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
     if (password !== confirmPassword) {
@@ -52,7 +52,12 @@ export default function SignupStep3({ onBack, onComplete, name, email }: SignupS
     try {
       setIsLoading(true);
       setError('');
-      await signup({ name, email, password });
+      await signup({
+        name,
+        email,
+        password,
+        passwordConfirm: confirmPassword,
+      });
       onComplete();
     } catch (error) {
       setError('Failed to create account. Please try again.');

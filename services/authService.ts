@@ -1,9 +1,6 @@
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: string;
-}
+import apiClient from './apiClient';
+import { API_CONFIG } from '~/config/api';
+import { User, LoginRequest, RegisterRequest, AuthResponse, UserProfile } from '~/types/api';
 
 export interface LoginData {
   email: string;
@@ -13,6 +10,7 @@ export interface LoginData {
 export interface SignupData {
   email: string;
   password: string;
+  passwordConfirm: string;
   name: string;
 }
 
@@ -20,53 +18,117 @@ class AuthService {
   private currentUser: User | null = null;
   private isAuthenticated = false;
 
-  // In a real app, these would be API calls to your backend
-  async login(data: LoginData): Promise<User> {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  constructor() {
+    this.initializeAuth();
+  }
 
-    // Mock validation - in real app, validate against backend
-    if (data.email === 'test@example.com' && data.password === 'password') {
-      const user: User = {
-        id: '1',
-        email: data.email,
-        name: 'Test User',
-        createdAt: new Date().toISOString(),
-      };
-      this.currentUser = user;
-      this.isAuthenticated = true;
-      return user;
+  // Initialize authentication state from stored tokens
+  private async initializeAuth() {
+    try {
+      if (apiClient.isAuthenticated()) {
+        // Try to get user profile to verify token is still valid
+        const response = await apiClient.get<UserProfile>(API_CONFIG.ENDPOINTS.PROFILE.GET);
+        if (response.data) {
+          this.currentUser = response.data.user;
+          this.isAuthenticated = true;
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+      // If profile fetch fails, clear auth state
+      this.currentUser = null;
+      this.isAuthenticated = false;
     }
+  }
 
-    throw new Error('Invalid email or password');
+  async login(data: LoginData): Promise<User> {
+    try {
+      //   // ('AuthService: Attempting login for:', data.email);
+      const response = await apiClient.login(data.email, data.password);
+      //   // ('AuthService: Login response received:', response);
+
+      if (response.data) {
+        this.currentUser = response.data.user;
+        this.isAuthenticated = true;
+        // // ('AuthService: Login successful, user set:', this.currentUser);
+        return response.data.user;
+      }
+
+      throw new Error('Login failed');
+    } catch (error: any) {
+      console.error('AuthService: Login error:', error);
+      throw new Error(error.message || 'Login failed');
+    }
   }
 
   async signup(data: SignupData): Promise<User> {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock validation - in real app, validate and create user in backend
-    if (data.email && data.password && data.name) {
-      const user: User = {
-        id: Date.now().toString(),
+    try {
+      //   // ('AuthService: Attempting signup for:', data.email);
+      //   // ('AuthService: Signup data received:', data);
+      const registerData = {
         email: data.email,
+        password: data.password,
+        password_confirm: data.passwordConfirm,
         name: data.name,
-        createdAt: new Date().toISOString(),
       };
-      this.currentUser = user;
-      this.isAuthenticated = true;
-      return user;
-    }
+      //   // ('AuthService: Register data being sent:', registerData);
+      const response = await apiClient.register(registerData);
+      //   // ('AuthService: Signup response received:', response);
 
-    throw new Error('Invalid signup data');
+      if (response.data) {
+        this.currentUser = response.data.user;
+        this.isAuthenticated = true;
+        // // ('AuthService: Signup successful, user set:', this.currentUser);
+        return response.data.user;
+      }
+
+      throw new Error('Registration failed');
+    } catch (error: any) {
+      console.error('AuthService: Signup error:', error);
+      throw new Error(error.message || 'Registration failed');
+    }
   }
 
   async logout(): Promise<void> {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      await apiClient.logout();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      this.currentUser = null;
+      this.isAuthenticated = false;
+    }
+  }
 
-    this.currentUser = null;
-    this.isAuthenticated = false;
+  async getProfile(): Promise<UserProfile> {
+    try {
+      const response = await apiClient.get<UserProfile>(API_CONFIG.ENDPOINTS.PROFILE.GET);
+      if (response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to fetch profile');
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to fetch profile');
+    }
+  }
+
+  async updateProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
+    try {
+      const response = await apiClient.patch<UserProfile>(
+        API_CONFIG.ENDPOINTS.PROFILE.UPDATE,
+        profileData
+      );
+      if (response.data) {
+        // Update current user if profile was updated
+        if (response.data.user) {
+          this.currentUser = response.data.user;
+        }
+        return response.data;
+      }
+      throw new Error('Failed to update profile');
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to update profile');
+    }
   }
 
   getCurrentUser(): User | null {
@@ -74,14 +136,28 @@ class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return this.isAuthenticated;
+    return this.isAuthenticated && apiClient.isAuthenticated();
   }
 
-  // In a real app, you would also have methods to:
-  // - Refresh tokens
-  // - Reset password
-  // - Update profile
-  // - Handle token expiration
+  // Refresh authentication state
+  async refreshAuth(): Promise<boolean> {
+    try {
+      if (apiClient.isAuthenticated()) {
+        const response = await apiClient.get<UserProfile>(API_CONFIG.ENDPOINTS.PROFILE.GET);
+        if (response.data) {
+          this.currentUser = response.data.user;
+          this.isAuthenticated = true;
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error refreshing auth:', error);
+      this.currentUser = null;
+      this.isAuthenticated = false;
+      return false;
+    }
+  }
 }
 
 export default new AuthService();

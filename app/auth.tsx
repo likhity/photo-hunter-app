@@ -23,9 +23,9 @@ export default function AuthScreen() {
 
   // Redirect to main app when user becomes authenticated
   useEffect(() => {
-    console.log('Auth screen - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+    // // ('Auth screen - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
     if (!isLoading && isAuthenticated) {
-      console.log('Redirecting to main app...');
+      //   // ('Redirecting to main app...');
       router.replace('/');
     }
   }, [isAuthenticated, isLoading, router]);

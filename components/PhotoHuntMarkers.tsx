@@ -9,14 +9,19 @@ import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 export default function PhotoHuntMarkers() {
   const { photoHunts, setSelectedPhotoHunt } = usePhotoHunt();
 
+  // Safety check to ensure photoHunts is an array
+  if (!photoHunts || !Array.isArray(photoHunts)) {
+    return null;
+  }
+
   // Separate hunted and non-hunted locations
   const huntedPoints = photoHunts
     .filter((photohunt) => photohunt.hunted)
-    .map((photohunt) => point([photohunt.long, photohunt.lat], { photohunt }));
+    .map((photohunt) => point([photohunt.longitude, photohunt.latitude], { photohunt }));
 
   const nonHuntedPoints = photoHunts
     .filter((photohunt) => !photohunt.hunted)
-    .map((photohunt) => point([photohunt.long, photohunt.lat], { photohunt }));
+    .map((photohunt) => point([photohunt.longitude, photohunt.latitude], { photohunt }));
 
   const onPointPress = async (event: OnPressEvent) => {
     if (event.features[0].properties?.photohunt) {

@@ -15,7 +15,7 @@ const Map = forwardRef<any, {}>((props, ref) => {
 
   useImperativeHandle(ref, () => ({
     setCamera: (options: any) => {
-      console.log('Setting camera with options:', options);
+      // ('Setting camera with options:', options);
       if (cameraRef.current) {
         // Temporarily disable followUserLocation
         setFollowUserLocation(false);
@@ -26,14 +26,14 @@ const Map = forwardRef<any, {}>((props, ref) => {
           zoomLevel: options.zoomLevel || 15,
           animationDuration: options.animationDuration || 1000,
         });
-        console.log('Camera set successfully');
+        // ('Camera set successfully');
 
         // Re-enable followUserLocation after a delay
         setTimeout(() => {
           setFollowUserLocation(true);
         }, 2000);
       } else {
-        console.log('Camera ref is null');
+        // ('Camera ref is null');
       }
     },
   }));
