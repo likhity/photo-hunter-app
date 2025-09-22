@@ -1,6 +1,23 @@
-# Photo Hunter App
+# PhotoHunter App
 
-A React Native scavenger hunt app with Django & PostgreSQL backend similar to Geocaching where users take photos of specific locations and objects, validated using multi-modal LLMs.
+A React Native scavenger hunt app with a Django & PostgreSQL backend similar to Geocaching where users take photos of specific locations and objects, validated using multi-modal LLMs.
+
+Will be deployed and available on the App Store and Google Play Store soon.
+
+## Screenshots
+
+<div align="center">
+  <img src="assets/screenshot1.PNG" width="200" alt="Home Screen" />
+  <img src="assets/screenshot2.PNG" width="200" alt="Map View" />
+  <img src="assets/screenshot3.PNG" width="200" alt="Location Details" />
+  <img src="assets/screenshot4.PNG" width="200" alt="Photo Hunt" />
+</div>
+
+<div align="center">
+  <img src="assets/screenshot5.PNG" width="200" alt="Camera Interface" />
+  <img src="assets/screenshot6.PNG" width="200" alt="Photo Validation" />
+  <img src="assets/screenshot7.PNG" width="200" alt="Success Screen" />
+</div>
 
 ### Map Component
 
