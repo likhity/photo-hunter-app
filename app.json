@@ -16,6 +16,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "statusBar": {
+      "style": "dark",
+      "backgroundColor": "#ffffff"
+    },
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",

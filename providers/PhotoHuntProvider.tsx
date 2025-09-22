@@ -3,6 +3,7 @@ import { createContext, PropsWithChildren, useContext, useEffect, useState } fro
 
 import { getDirections } from '~/services/directions';
 import photoHuntService, { PhotoHunt, CreatePhotoHuntData } from '~/services/photoHuntService';
+import { useUser } from './UserProvider';
 
 interface DirectionResponse {
   routes?: {
@@ -41,6 +42,7 @@ const PhotoHuntContext = createContext<PhotoHuntContextType>({
 });
 
 export default function PhotoHuntProvider({ children }: PropsWithChildren) {
+  const { user } = useUser();
   const [photoHunts, setPhotoHunts] = useState<PhotoHunt[]>(photoHuntService.getAllPhotoHunts());
   const [selectedPhotoHunt, setSelectedPhotoHunt] = useState<PhotoHunt | null>(null);
   const [direction, setDirection] = useState<DirectionResponse | null>(null);
@@ -50,7 +52,7 @@ export default function PhotoHuntProvider({ children }: PropsWithChildren) {
   };
 
   const createPhotoHunt = async (data: CreatePhotoHuntData): Promise<PhotoHunt> => {
-    const newPhotoHunt = photoHuntService.createPhotoHunt(data);
+    const newPhotoHunt = photoHuntService.createPhotoHunt(data, user?.id);
     refreshPhotoHunts();
     return newPhotoHunt;
   };

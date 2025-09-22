@@ -37,7 +37,11 @@ class PhotoHuntService {
     return this.photoHunts.filter((p) => p.isUserGenerated);
   }
 
-  createPhotoHunt(data: CreatePhotoHuntData): PhotoHunt {
+  getUserPhotoHunts(userId: string): PhotoHunt[] {
+    return this.photoHunts.filter((p) => p.isUserGenerated && p.createdBy === userId);
+  }
+
+  createPhotoHunt(data: CreatePhotoHuntData, userId?: string): PhotoHunt {
     const newPhotoHunt: PhotoHunt = {
       id: this.nextId++,
       long: data.long,
@@ -46,7 +50,7 @@ class PhotoHuntService {
       description: data.description,
       hunted: false,
       isUserGenerated: true,
-      createdBy: 'current-user', // In a real app, this would be the actual user ID
+      createdBy: userId || 'current-user', // In a real app, this would be the actual user ID
       referenceImage: data.referenceImage,
       createdAt: new Date().toISOString(),
     };

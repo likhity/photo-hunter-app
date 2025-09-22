@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -25,15 +24,19 @@ interface CreatePhotoHuntSheetProps {
     referenceImage: string;
   }) => void;
   onSheetChange?: (isOpen: boolean) => void;
+  onCameraOpen?: () => void;
+  onPhotoTaken?: (photoUri: string) => void;
 }
 
 export interface CreatePhotoHuntSheetRef {
   open: () => void;
   close: () => void;
+  setReferenceImage: (uri: string) => void;
+  getPhotoHuntName: () => string;
 }
 
 const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHuntSheetProps>(
-  ({ onSubmit, onSheetChange }, ref) => {
+  ({ onSubmit, onSheetChange, onCameraOpen, onPhotoTaken }, ref) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [referenceImage, setReferenceImage] = useState<string | null>(null);
@@ -44,33 +47,26 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
     useImperativeHandle(ref, () => ({
       open: () => {
         // Don't reset form when opening - preserve state
-        bottomSheetRef.current?.snapToIndex(0);
-        onSheetChange?.(true);
+        setTimeout(() => {
+          bottomSheetRef.current?.snapToIndex(0);
+          onSheetChange?.(true);
+        }, 100);
       },
       close: () => {
         Keyboard.dismiss();
         bottomSheetRef.current?.close();
         onSheetChange?.(false);
       },
+      setReferenceImage: (uri: string) => {
+        setReferenceImage(uri);
+      },
+      getPhotoHuntName: () => {
+        return name;
+      },
     }));
 
-    const takePhoto = async () => {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to access your camera.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled) {
-        setReferenceImage(result.assets[0].uri);
-      }
+    const takePhoto = () => {
+      onCameraOpen?.();
     };
 
     const getCurrentLocation = async () => {
@@ -219,7 +215,7 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <Image source={cameraIcon} style={styles.cameraIconPlaceholder} />
-                  <Text style={styles.imagePlaceholderText}>Take Photo</Text>
+                  <Text style={styles.imagePlaceholderText}>Take Reference Photo</Text>
                 </View>
               )}
             </TouchableOpacity>
