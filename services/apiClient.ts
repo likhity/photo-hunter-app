@@ -153,37 +153,72 @@ class ApiClient {
         }
       }
 
-      const data = await response.json();
+      // Read raw text first so we can report HTML or other non-JSON responses
+      const responseHeaders = response.headers
+        ? Object.fromEntries(response.headers.entries())
+        : null;
+      const contentType = response.headers?.get('content-type') || '';
+      const rawText = await response.text();
+
+      let parsed: any | undefined;
+      if (rawText && contentType.includes('application/json')) {
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (e) {
+          // JSON parse failed; log useful diagnostics
+          console.error('Response JSON parse failed. Raw body will be shown below.');
+        }
+      }
 
       if (!response.ok) {
-        // Enhanced logging for error responses
+        // Enhanced logging for error responses, including raw body
+        let parsedRequestBody: any = null;
+        if (options.body && typeof options.body === 'string') {
+          try {
+            parsedRequestBody = JSON.parse(options.body);
+          } catch (_) {
+            parsedRequestBody = options.body;
+          }
+        }
+
         console.error('API Error Response:', {
           status: response.status,
           statusText: response.statusText,
           url,
           method: options.method || 'GET',
-          requestBody: options.body ? JSON.parse(options.body) : null,
-          responseData: data,
-          headers: response.headers ? Object.fromEntries(response.headers.entries()) : null,
+          headers: responseHeaders,
+          contentType,
         });
-
-        // Pretty print the JSON data for easier debugging
-        console.error('Pretty printed response data:', JSON.stringify(data, null, 2));
-        if (options.body) {
-          console.error(
-            'Pretty printed request body:',
-            JSON.stringify(JSON.parse(options.body), null, 2)
-          );
+        if (parsed !== undefined) {
+          console.error('Error response (parsed JSON):', JSON.stringify(parsed, null, 2));
+        }
+        console.error('Error response raw body (truncated to 10KB):');
+        console.error(
+          rawText.length > 10_000 ? rawText.slice(0, 10_000) + '... [truncated]' : rawText
+        );
+        if (parsedRequestBody !== null) {
+          console.error('Request body (pretty):', JSON.stringify(parsedRequestBody, null, 2));
         }
 
+        const message = (parsed && (parsed.error || parsed.message)) || 'Request failed';
         throw {
-          message: data.error || data.message || 'Request failed',
+          message,
           status: response.status,
-          details: data,
+          details: {
+            headers: responseHeaders,
+            contentType,
+            parsedBody: parsed,
+            rawBody: rawText,
+          },
         } as ApiError;
       }
 
-      return { data };
+      // Success path: return parsed JSON when available; otherwise include raw text
+      const data = (parsed !== undefined ? parsed : (undefined as unknown)) as T;
+      return {
+        data,
+        message: parsed === undefined && rawText ? 'Non-JSON response received' : undefined,
+      };
     } catch (error) {
       if (error instanceof TypeError) {
         // Network error
@@ -267,10 +302,22 @@ class ApiClient {
         body: formData,
       });
 
-      const data = await response.json();
+      const responseHeaders = response.headers
+        ? Object.fromEntries(response.headers.entries())
+        : null;
+      const contentType = response.headers?.get('content-type') || '';
+      const rawText = await response.text();
+
+      let parsed: any | undefined;
+      if (rawText && contentType.includes('application/json')) {
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (e) {
+          console.error('Upload response JSON parse failed. Raw body will be shown below.');
+        }
+      }
 
       if (!response.ok) {
-        // Enhanced logging for upload error responses
         console.error('File Upload Error Response:', {
           status: response.status,
           statusText: response.statusText,
@@ -278,25 +325,38 @@ class ApiClient {
           method: 'POST',
           fileName: file.name,
           fileType: file.type,
-          additionalData,
-          responseData: data,
-          headers: response.headers ? Object.fromEntries(response.headers.entries()) : null,
+          headers: responseHeaders,
+          contentType,
         });
-
-        // Pretty print the JSON data for easier debugging
-        console.error('Pretty printed upload response data:', JSON.stringify(data, null, 2));
+        if (parsed !== undefined) {
+          console.error('Upload error response (parsed JSON):', JSON.stringify(parsed, null, 2));
+        }
+        console.error('Upload error response raw body (truncated to 10KB):');
+        console.error(
+          rawText.length > 10_000 ? rawText.slice(0, 10_000) + '... [truncated]' : rawText
+        );
         if (additionalData) {
-          console.error('Pretty printed additional data:', JSON.stringify(additionalData, null, 2));
+          console.error('Additional data (pretty):', JSON.stringify(additionalData, null, 2));
         }
 
+        const message = (parsed && (parsed.error || parsed.message)) || 'Upload failed';
         throw {
-          message: data.error || data.message || 'Upload failed',
+          message,
           status: response.status,
-          details: data,
+          details: {
+            headers: responseHeaders,
+            contentType,
+            parsedBody: parsed,
+            rawBody: rawText,
+          },
         } as ApiError;
       }
 
-      return { data };
+      const data = (parsed !== undefined ? parsed : (undefined as unknown)) as T;
+      return {
+        data,
+        message: parsed === undefined && rawText ? 'Non-JSON response received' : undefined,
+      };
     } catch (error) {
       if (error instanceof TypeError) {
         throw {
