@@ -85,6 +85,18 @@ export interface PhotoHuntCreateRequest {
   reference_image?: string;
 }
 
+export interface PhotoHuntCreateFormData {
+  name: string;
+  description: string;
+  lat: number;
+  long: number;
+  reference_image_file: {
+    uri: string;
+    type: string;
+    name: string;
+  };
+}
+
 export interface PhotoSubmissionRequest {
   photohunt_id: string;
   image_url: string;

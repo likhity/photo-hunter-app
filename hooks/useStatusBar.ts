@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
 type StatusBarStyle = 'light' | 'dark' | 'auto';
 

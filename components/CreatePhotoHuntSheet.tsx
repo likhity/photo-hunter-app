@@ -21,7 +21,7 @@ interface CreatePhotoHuntSheetProps {
     description: string;
     lat: number;
     long: number;
-    referenceImage: string;
+    referenceImage: string | { uri: string; type: string; name: string };
   }) => void;
   onSheetChange?: (isOpen: boolean) => void;
   onCameraOpen?: () => void;
@@ -39,7 +39,9 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
   ({ onSubmit, onSheetChange, onCameraOpen, onPhotoTaken }, ref) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [referenceImage, setReferenceImage] = useState<string | null>(null);
+    const [referenceImage, setReferenceImage] = useState<
+      string | { uri: string; type: string; name: string } | null
+    >(null);
     const [location, setLocation] = useState<{ lat: number; long: number } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -58,7 +60,13 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
         onSheetChange?.(false);
       },
       setReferenceImage: (uri: string) => {
-        setReferenceImage(uri);
+        // Create a file object with proper metadata for multipart upload
+        const fileObject = {
+          uri,
+          type: 'image/jpeg', // Default to JPEG, could be enhanced to detect actual type
+          name: `photohunt_${Date.now()}.jpg`, // Generate unique filename
+        };
+        setReferenceImage(fileObject);
       },
       getPhotoHuntName: () => {
         return name;
@@ -211,7 +219,12 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
             </View>
             <TouchableOpacity style={styles.imagePicker} onPress={takePhoto}>
               {referenceImage ? (
-                <Image source={{ uri: referenceImage }} style={styles.selectedImage} />
+                <Image
+                  source={{
+                    uri: typeof referenceImage === 'string' ? referenceImage : referenceImage.uri,
+                  }}
+                  style={styles.selectedImage}
+                />
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <Image source={cameraIcon} style={styles.cameraIconPlaceholder} />

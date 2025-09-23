@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { GoogleStyleInput } from './GoogleStyleInput';
+
 import { useUser } from '~/providers/UserProvider';
 
 interface SignupStep3Props {

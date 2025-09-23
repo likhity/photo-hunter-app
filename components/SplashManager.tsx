@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 
 import AnimatedSplashScreen from './AnimatedSplashScreen';
+
 import { useAnimation } from '~/providers/AnimationProvider';
 import { useUser } from '~/providers/UserProvider';
 

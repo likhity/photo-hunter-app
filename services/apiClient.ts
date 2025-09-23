@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+
 import { getBaseUrl, API_CONFIG } from '~/config/api';
 
 // Token storage keys
@@ -155,6 +156,26 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        // Enhanced logging for error responses
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          method: options.method || 'GET',
+          requestBody: options.body ? JSON.parse(options.body) : null,
+          responseData: data,
+          headers: response.headers ? Object.fromEntries(response.headers.entries()) : null,
+        });
+
+        // Pretty print the JSON data for easier debugging
+        console.error('Pretty printed response data:', JSON.stringify(data, null, 2));
+        if (options.body) {
+          console.error(
+            'Pretty printed request body:',
+            JSON.stringify(JSON.parse(options.body), null, 2)
+          );
+        }
+
         throw {
           message: data.error || data.message || 'Request failed',
           status: response.status,
@@ -220,7 +241,7 @@ class ApiClient {
     additionalData?: Record<string, any>
   ): Promise<ApiResponse<T>> {
     const formData = new FormData();
-    formData.append('file', {
+    formData.append('reference_image_file', {
       uri: file.uri,
       type: file.type,
       name: file.name,
@@ -249,6 +270,25 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        // Enhanced logging for upload error responses
+        console.error('File Upload Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          method: 'POST',
+          fileName: file.name,
+          fileType: file.type,
+          additionalData,
+          responseData: data,
+          headers: response.headers ? Object.fromEntries(response.headers.entries()) : null,
+        });
+
+        // Pretty print the JSON data for easier debugging
+        console.error('Pretty printed upload response data:', JSON.stringify(data, null, 2));
+        if (additionalData) {
+          console.error('Pretty printed additional data:', JSON.stringify(additionalData, null, 2));
+        }
+
         throw {
           message: data.error || data.message || 'Upload failed',
           status: response.status,

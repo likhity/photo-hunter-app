@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { Button } from './Button';
+
 import { useUser } from '~/providers/UserProvider';
 
 interface SignupScreenProps {

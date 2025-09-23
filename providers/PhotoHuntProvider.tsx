@@ -1,10 +1,11 @@
 import * as Location from 'expo-location';
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 
+import { useUser } from './UserProvider';
+
 import { getDirections } from '~/services/directions';
 import photoHuntService, { CreatePhotoHuntData } from '~/services/photoHuntService';
 import { PhotoHunt, PhotoHuntCompletion, PhotoSubmissionResponse } from '~/types/api';
-import { useUser } from './UserProvider';
 
 interface DirectionResponse {
   routes?: {

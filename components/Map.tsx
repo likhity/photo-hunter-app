@@ -8,7 +8,7 @@ import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '');
 
-const Map = forwardRef<any, {}>((props, ref) => {
+const Map = forwardRef<any, object>((props, ref) => {
   const { directionCoordinates } = usePhotoHunt();
   const cameraRef = useRef<Camera>(null);
   const [followUserLocation, setFollowUserLocation] = useState(true);

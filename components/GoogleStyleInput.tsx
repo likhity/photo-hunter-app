@@ -1,6 +1,6 @@
-import React, { useState, forwardRef, useRef, useEffect } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
+import React, { useState, forwardRef, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, TextInputProps } from 'react-native';
 
 interface GoogleStyleInputProps extends TextInputProps {

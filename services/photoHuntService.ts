@@ -16,7 +16,13 @@ export interface CreatePhotoHuntData {
   description: string;
   lat: number;
   long: number;
-  referenceImage?: string;
+  referenceImage?:
+    | string
+    | {
+        uri: string;
+        type: string;
+        name: string;
+      };
 }
 
 class PhotoHuntService {
@@ -68,23 +74,107 @@ class PhotoHuntService {
   // Create new PhotoHunt
   async createPhotoHunt(data: CreatePhotoHuntData): Promise<PhotoHunt> {
     try {
-      const requestData: PhotoHuntCreateRequest = {
-        name: data.name,
-        description: data.description,
-        latitude: data.lat,
-        longitude: data.long,
-        reference_image: data.referenceImage,
-      };
+      // Check if referenceImage is a file object (for multipart upload) or string (for URL)
+      const isFileObject =
+        data.referenceImage &&
+        typeof data.referenceImage === 'object' &&
+        'uri' in data.referenceImage;
 
-      const response = await apiClient.post<PhotoHunt>(
-        API_CONFIG.ENDPOINTS.PHOTOHUNTS.CREATE,
-        requestData
-      );
-      if (response.data) {
-        return response.data;
+      if (isFileObject) {
+        // Use multipart form data for file upload
+        const file = data.referenceImage as { uri: string; type: string; name: string };
+
+        console.log('Creating PhotoHunt with file upload:', {
+          name: data.name,
+          description: data.description,
+          lat: data.lat,
+          long: data.long,
+          file: {
+            uri: file.uri,
+            type: file.type,
+            name: file.name,
+          },
+          endpoint: API_CONFIG.ENDPOINTS.PHOTOHUNTS.CREATE,
+        });
+
+        const response = await apiClient.uploadFile<PhotoHunt>(
+          API_CONFIG.ENDPOINTS.PHOTOHUNTS.CREATE,
+          file,
+          {
+            name: data.name,
+            description: data.description,
+            lat: data.lat,
+            long: data.long,
+          }
+        );
+
+        if (response.data) {
+          return response.data;
+        }
+        throw new Error('Failed to create PhotoHunt');
+      } else {
+        // Use JSON for URL-based reference image
+        const requestData: PhotoHuntCreateRequest = {
+          name: data.name,
+          description: data.description,
+          latitude: data.lat,
+          longitude: data.long,
+          reference_image: data.referenceImage as string,
+        };
+
+        // Log the request data being sent
+        console.log('Creating PhotoHunt with data:', {
+          name: requestData.name,
+          description: requestData.description,
+          latitude: requestData.latitude,
+          longitude: requestData.longitude,
+          reference_image: requestData.reference_image ? 'Present' : 'Not provided',
+          endpoint: API_CONFIG.ENDPOINTS.PHOTOHUNTS.CREATE,
+        });
+
+        // Pretty print the full request data
+        console.log('Pretty printed request data:', JSON.stringify(requestData, null, 2));
+
+        const response = await apiClient.post<PhotoHunt>(
+          API_CONFIG.ENDPOINTS.PHOTOHUNTS.CREATE,
+          requestData
+        );
+        if (response.data) {
+          return response.data;
+        }
+        throw new Error('Failed to create PhotoHunt');
       }
-      throw new Error('Failed to create PhotoHunt');
     } catch (error: any) {
+      // Enhanced error logging for photo hunt creation
+      console.error('PhotoHunt creation failed:', {
+        error: error.message,
+        status: error.status,
+        details: error.details,
+        requestData: {
+          name: data.name,
+          description: data.description,
+          lat: data.lat,
+          long: data.long,
+          referenceImage: data.referenceImage ? 'Present' : 'Not provided',
+        },
+      });
+
+      // Pretty print the error details and request data
+      console.error('Pretty printed error details:', JSON.stringify(error.details, null, 2));
+      console.error(
+        'Pretty printed request data:',
+        JSON.stringify(
+          {
+            name: data.name,
+            description: data.description,
+            lat: data.lat,
+            long: data.long,
+            referenceImage: data.referenceImage,
+          },
+          null,
+          2
+        )
+      );
       throw new Error(error.message || 'Failed to create PhotoHunt');
     }
   }

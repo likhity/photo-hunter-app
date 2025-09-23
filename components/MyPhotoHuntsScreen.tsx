@@ -14,8 +14,7 @@ import {
 
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 import { useUser } from '~/providers/UserProvider';
-import { PhotoHunt } from '~/services/photoHuntService';
-import photoHuntService from '~/services/photoHuntService';
+import photoHuntService, { PhotoHunt } from '~/services/photoHuntService';
 
 interface MyPhotoHuntsScreenProps {
   onClose: () => void;

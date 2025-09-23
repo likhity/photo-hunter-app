@@ -2,18 +2,18 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import * as Location from 'expo-location';
 import { Stack, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useRef, useState, useEffect } from 'react';
 import { TouchableOpacity, StyleSheet, Alert, Image, View, Modal } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 
 import plusIcon from '~/assets/plus-icon.png';
+import AnimationConfigScreen from '~/components/AnimationConfigScreen';
 import CameraScreen from '~/components/CameraScreen';
 import CreatePhotoHuntSheet from '~/components/CreatePhotoHuntSheet';
 import Map from '~/components/Map';
 import MyPhotoHuntsScreen from '~/components/MyPhotoHuntsScreen';
 import SelectedPhotoHuntSheet from '~/components/SelectedPhotoHuntSheet';
 import UserMenu from '~/components/UserMenu';
-import AnimationConfigScreen from '~/components/AnimationConfigScreen';
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 import { useUser } from '~/providers/UserProvider';
 
@@ -49,13 +49,15 @@ export default function Home() {
     description: string;
     lat: number;
     long: number;
-    referenceImage: string;
+    referenceImage: string | { uri: string; type: string; name: string };
   }) => {
     try {
       await createPhotoHunt(photoHuntData);
       Alert.alert('Success', 'PhotoHunt created successfully!');
-    } catch {
-      Alert.alert('Error', 'Failed to create photo hunt. Please try again.');
+    } catch (error: any) {
+      console.error('PhotoHunt creation error in UI:', error);
+      const errorMessage = error?.message || 'Failed to create photo hunt. Please try again.';
+      Alert.alert('Error', errorMessage);
     }
   };
 

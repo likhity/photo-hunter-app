@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 
 import LandingScreen from '~/components/LandingScreen';
 import NewLoginScreen from '~/components/NewLoginScreen';

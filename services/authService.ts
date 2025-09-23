@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+
 import { API_CONFIG } from '~/config/api';
 import { User, LoginRequest, RegisterRequest, AuthResponse, UserProfile } from '~/types/api';
 
@@ -17,27 +18,41 @@ export interface SignupData {
 class AuthService {
   private currentUser: User | null = null;
   private isAuthenticated = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializeAuth();
+    this.initializationPromise = this.initializeAuth();
   }
 
   // Initialize authentication state from stored tokens
   private async initializeAuth() {
     try {
+      console.log('AuthService: Initializing authentication...');
       if (apiClient.isAuthenticated()) {
+        console.log('AuthService: Tokens found, verifying with server...');
         // Try to get user profile to verify token is still valid
         const response = await apiClient.get<UserProfile>(API_CONFIG.ENDPOINTS.PROFILE.GET);
         if (response.data) {
           this.currentUser = response.data.user;
           this.isAuthenticated = true;
+          console.log('AuthService: Authentication verified, user:', this.currentUser?.email);
         }
+      } else {
+        console.log('AuthService: No tokens found, user not authenticated');
       }
     } catch (error) {
-      console.error('Error initializing auth:', error);
+      console.error('AuthService: Error initializing auth:', error);
       // If profile fetch fails, clear auth state
       this.currentUser = null;
       this.isAuthenticated = false;
+    }
+  }
+
+  // Wait for initialization to complete
+  async waitForInitialization(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      this.initializationPromise = null; // Mark as complete
     }
   }
 
@@ -137,6 +152,11 @@ class AuthService {
 
   isLoggedIn(): boolean {
     return this.isAuthenticated && apiClient.isAuthenticated();
+  }
+
+  // Check if initialization is complete
+  isInitialized(): boolean {
+    return this.initializationPromise === null;
   }
 
   // Refresh authentication state

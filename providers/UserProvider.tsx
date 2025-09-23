@@ -38,10 +38,22 @@ export default function UserProvider({ children }: PropsWithChildren) {
     const checkAuthStatus = async () => {
       try {
         setIsLoading(true);
+        console.log('UserProvider: Checking authentication status...');
+
+        // Wait for AuthService initialization to complete
+        await authService.waitForInitialization();
+        console.log('UserProvider: AuthService initialization complete');
 
         // Check if user is already authenticated (tokens exist)
         const currentUser = authService.getCurrentUser();
         const isLoggedIn = authService.isLoggedIn();
+
+        console.log(
+          'UserProvider: Auth status - isLoggedIn:',
+          isLoggedIn,
+          'currentUser:',
+          currentUser?.email
+        );
 
         if (isLoggedIn && currentUser) {
           setUser(currentUser);
@@ -49,10 +61,12 @@ export default function UserProvider({ children }: PropsWithChildren) {
 
           // Fetch user profile
           try {
+            console.log('UserProvider: Fetching user profile...');
             const userProfile = await authService.getProfile();
             setProfile(userProfile);
+            console.log('UserProvider: Profile fetched successfully');
           } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('UserProvider: Error fetching profile:', error);
             // If profile fetch fails, try to refresh auth
             const refreshed = await authService.refreshAuth();
             if (refreshed) {
@@ -60,26 +74,30 @@ export default function UserProvider({ children }: PropsWithChildren) {
               if (refreshedUser) {
                 setUser(refreshedUser);
                 setIsAuthenticated(true);
+                console.log('UserProvider: Auth refreshed successfully');
               }
             } else {
               // If refresh fails, clear auth state
               setUser(null);
               setProfile(null);
               setIsAuthenticated(false);
+              console.log('UserProvider: Auth refresh failed, clearing state');
             }
           }
         } else {
           setUser(null);
           setProfile(null);
           setIsAuthenticated(false);
+          console.log('UserProvider: User not authenticated');
         }
       } catch (error) {
-        console.error('Error checking auth status:', error);
+        console.error('UserProvider: Error checking auth status:', error);
         setUser(null);
         setProfile(null);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
+        console.log('UserProvider: Auth check complete, isLoading set to false');
       }
     };
 

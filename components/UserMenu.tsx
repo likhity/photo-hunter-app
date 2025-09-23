@@ -107,7 +107,7 @@ export default function UserMenu({
   }
 
   return (
-    <Modal visible={isVisible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal visible={isVisible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.menuContainer}>
           {/* Header */}
