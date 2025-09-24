@@ -28,6 +28,11 @@ class AuthService {
   private async initializeAuth() {
     try {
       console.log('AuthService: Initializing authentication...');
+
+      // Wait for ApiClient to finish loading tokens from SecureStore
+      await apiClient.waitForInitialization();
+      console.log('AuthService: ApiClient initialization complete');
+
       if (apiClient.isAuthenticated()) {
         console.log('AuthService: Tokens found, verifying with server...');
         // Try to get user profile to verify token is still valid
@@ -162,6 +167,9 @@ class AuthService {
   // Refresh authentication state
   async refreshAuth(): Promise<boolean> {
     try {
+      // Ensure ApiClient is initialized before checking authentication
+      await apiClient.waitForInitialization();
+
       if (apiClient.isAuthenticated()) {
         const response = await apiClient.get<UserProfile>(API_CONFIG.ENDPOINTS.PROFILE.GET);
         if (response.data) {

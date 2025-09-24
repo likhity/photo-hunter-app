@@ -29,20 +29,36 @@ class ApiClient {
   private baseURL: string;
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(baseURL: string = getBaseUrl()) {
     this.baseURL = baseURL;
-    // // ('ApiClient: Initialized with base URL:', this.baseURL);
-    this.initializeTokens();
+    console.log('ApiClient: Initialized with base URL:', this.baseURL);
+    this.initializationPromise = this.initializeTokens();
   }
 
   // Initialize tokens from secure storage
   private async initializeTokens() {
     try {
+      console.log('ApiClient: Loading tokens from SecureStore...');
       this.accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       this.refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      console.log(
+        'ApiClient: Tokens loaded - accessToken:',
+        !!this.accessToken,
+        'refreshToken:',
+        !!this.refreshToken
+      );
     } catch (error) {
-      console.error('Error loading tokens:', error);
+      console.error('ApiClient: Error loading tokens:', error);
+    }
+  }
+
+  // Wait for token initialization to complete
+  async waitForInitialization(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      this.initializationPromise = null;
     }
   }
 

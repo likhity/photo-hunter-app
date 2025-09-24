@@ -20,6 +20,8 @@ interface LandingScreenProps {
 export default function LandingScreen({ onLogin, onSignup }: LandingScreenProps) {
   const [fontsLoaded] = useFonts({
     Sen: require('~/assets/fonts/Sen-VariableFont_wght.ttf'),
+    'Poppins-Regular': require('~/assets/fonts/Poppins-Regular.ttf'),
+    'Poppins-Bold': require('~/assets/fonts/Poppins-Bold.ttf'),
   });
 
   if (!fontsLoaded) {
@@ -96,14 +98,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontFamily: 'Sen',
     fontSize: 32,
-    fontWeight: '700',
   },
   titleBlack: {
+    fontFamily: 'Poppins-Regular',
     color: '#1F2937',
   },
   titleRed: {
+    fontFamily: 'Poppins-Bold',
     color: '#E14545',
   },
   tagline: {

@@ -1,7 +1,7 @@
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 
-import authService, { User, LoginData, SignupData } from '~/services/authService';
-import { UserProfile } from '~/types/api';
+import authService, { LoginData, SignupData } from '~/services/authService';
+import { User, UserProfile } from '~/types/api';
 
 interface UserContextType {
   user: User | null;
