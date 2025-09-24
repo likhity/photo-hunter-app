@@ -99,7 +99,11 @@ export interface PhotoHuntCreateFormData {
 
 export interface PhotoSubmissionRequest {
   photohunt_id: string;
-  image_url: string;
+  photo: {
+    uri: string;
+    type: string;
+    name: string;
+  };
 }
 
 export interface PhotoSubmissionResponse {

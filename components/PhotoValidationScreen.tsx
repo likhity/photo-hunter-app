@@ -12,14 +12,14 @@ import {
   Alert,
 } from 'react-native';
 
-import { usePhotoValidation } from '~/hooks/usePhotoValidation';
-import { PhotoValidationResult } from '~/services/photoValidationService';
+import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
+import { PhotoSubmissionResponse } from '~/types/api';
 
 interface PhotoValidationScreenProps {
   photoUri: string;
   photoHuntId: string;
   photoHuntName: string;
-  onValidationComplete: (success: boolean, result?: PhotoValidationResult) => void;
+  onValidationComplete: (success: boolean, result?: PhotoSubmissionResponse) => void;
   onRetry: () => void;
 }
 
@@ -36,11 +36,11 @@ export default function PhotoValidationScreen({
     'validating'
   );
   const [progress, setProgress] = useState(0);
-  const [validationResult, setValidationResult] = useState<PhotoValidationResult | null>(null);
+  const [validationResult, setValidationResult] = useState<PhotoSubmissionResponse | null>(null);
   const spinValue = new Animated.Value(0);
   const scaleValue = new Animated.Value(1);
 
-  const { validatePhoto, isValidating, error } = usePhotoValidation();
+  const { submitPhoto } = usePhotoHunt();
 
   useEffect(() => {
     // Start validation process
@@ -76,7 +76,7 @@ export default function PhotoValidationScreen({
       }, interval);
 
       // Submit photo for validation
-      const result = await validatePhoto(photoHuntId, 'camera');
+      const result = await submitPhoto(photoHuntId, photoUri);
       setValidationResult(result);
 
       // Clear progress interval
@@ -84,7 +84,7 @@ export default function PhotoValidationScreen({
       setProgress(100);
 
       // Determine validation status based on result
-      if (result.isValid) {
+      if (result.validation.is_valid) {
         setValidationStatus('success');
       } else {
         setValidationStatus('failed');
@@ -130,7 +130,7 @@ export default function PhotoValidationScreen({
         return `You've successfully hunted\n"${photoHuntName}".`;
       case 'failed':
         return (
-          validationResult?.notes ||
+          validationResult?.validation.notes ||
           "The photo doesn't match the reference image. Please try taking another photo."
         );
       default:
@@ -140,7 +140,7 @@ export default function PhotoValidationScreen({
 
   const getValidationDetails = () => {
     if (validationResult) {
-      return `Similarity: ${Math.round(validationResult.similarityScore * 100)}% | Confidence: ${Math.round(validationResult.confidenceScore * 100)}%`;
+      return `Similarity: ${Math.round(validationResult.validation.similarity_score * 100)}% | Confidence: ${Math.round(validationResult.validation.confidence_score * 100)}%`;
     }
     return '';
   };

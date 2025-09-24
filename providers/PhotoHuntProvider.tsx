@@ -30,7 +30,7 @@ interface PhotoHuntContextType {
   createPhotoHunt: (data: CreatePhotoHuntData) => Promise<PhotoHunt>;
   updatePhotoHunt: (id: string, data: Partial<CreatePhotoHuntData>) => Promise<PhotoHunt>;
   deletePhotoHunt: (id: string) => Promise<boolean>;
-  submitPhoto: (photohuntId: string, imageUrl: string) => Promise<PhotoSubmissionResponse>;
+  submitPhoto: (photohuntId: string, imageUri: string) => Promise<PhotoSubmissionResponse>;
   getUserCompletions: () => Promise<PhotoHuntCompletion[]>;
   getNearbyPhotoHunts: (lat: number, lng: number, radius?: number) => Promise<PhotoHunt[]>;
   refreshPhotoHunts: () => Promise<void>;
@@ -58,7 +58,7 @@ const PhotoHuntContext = createContext<PhotoHuntContextType>({
 });
 
 export default function PhotoHuntProvider({ children }: PropsWithChildren) {
-  const { user, isAuthenticated } = useUser();
+  const { isAuthenticated } = useUser();
   const [photoHunts, setPhotoHunts] = useState<PhotoHunt[]>([]);
   const [selectedPhotoHunt, setSelectedPhotoHunt] = useState<PhotoHunt | null>(null);
   const [direction, setDirection] = useState<DirectionResponse | null>(null);
@@ -135,12 +135,12 @@ export default function PhotoHuntProvider({ children }: PropsWithChildren) {
 
   const submitPhoto = async (
     photohuntId: string,
-    imageUrl: string
+    imageUri: string
   ): Promise<PhotoSubmissionResponse> => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await photoHuntService.submitPhoto(photohuntId, imageUrl);
+      const result = await photoHuntService.submitPhoto(photohuntId, imageUri);
       await refreshPhotoHunts(); // Refresh to update hunted status
       return result;
     } catch (err: any) {

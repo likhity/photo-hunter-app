@@ -91,19 +91,16 @@ class PhotoValidationService {
     }
   }
 
-  // Upload image and submit for validation
+  // Submit photo for validation directly
   async submitPhotoForValidation(
     photohuntId: string,
     imageUri: string
   ): Promise<PhotoValidationResult> {
     try {
-      // First upload the image to get a URL
-      const imageUrl = await photoHuntService.uploadImage(imageUri);
-
-      // Then submit for validation
+      // Submit photo directly to backend for validation
       const response: PhotoSubmissionResponse = await photoHuntService.submitPhoto(
         photohuntId,
-        imageUrl
+        imageUri
       );
 
       return {

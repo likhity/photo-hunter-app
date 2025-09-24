@@ -110,15 +110,13 @@ export default function SelectedPhotoHuntSheet() {
     setShowValidation(false);
 
     if (success && selectedPhotoHunt) {
-      Alert.alert(
-        'Success!',
-        `Congratulations! You've completed the "${selectedPhotoHunt.name}" photo hunt!`,
-        [{ text: 'OK', onPress: () => setSelectedPhotoHunt(null) }]
-      );
+      Alert.alert('Success!', `Congratulations! You hunted "${selectedPhotoHunt.name}"!`, [
+        { text: 'OK', onPress: () => setSelectedPhotoHunt(null) },
+      ]);
     } else {
       Alert.alert(
         'Try Again',
-        "The photo doesn't match the reference image. Please try taking another photo.",
+        "The photo doesn't match the reference image well enough. Try taking looking harder 🔍 :)",
         [{ text: 'OK' }]
       );
     }

@@ -273,10 +273,11 @@ class ApiClient {
   async uploadFile<T>(
     endpoint: string,
     file: { uri: string; type: string; name: string },
-    additionalData?: Record<string, any>
+    additionalData?: Record<string, any>,
+    fileFieldName: string = 'reference_image_file'
   ): Promise<ApiResponse<T>> {
     const formData = new FormData();
-    formData.append('reference_image_file', {
+    formData.append(fileFieldName, {
       uri: file.uri,
       type: file.type,
       name: file.name,

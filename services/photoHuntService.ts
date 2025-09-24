@@ -231,18 +231,24 @@ class PhotoHuntService {
     }
   }
 
-  // Submit photo for validation
-  async submitPhoto(photohuntId: string, imageUrl: string): Promise<PhotoSubmissionResponse> {
+  // Submit photo for validation using multipart form data
+  async submitPhoto(photohuntId: string, imageUri: string): Promise<PhotoSubmissionResponse> {
     try {
-      const requestData: PhotoSubmissionRequest = {
-        photohunt_id: photohuntId,
-        image_url: imageUrl,
+      const photoFile = {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: `photo_${Date.now()}.jpg`,
       };
 
-      const response = await apiClient.post<PhotoSubmissionResponse>(
+      const response = await apiClient.uploadFile<PhotoSubmissionResponse>(
         API_CONFIG.ENDPOINTS.PHOTOS.SUBMIT,
-        requestData
+        photoFile,
+        {
+          photohunt_id: photohuntId,
+        },
+        'photo' // Use 'photo' as the field name for the backend
       );
+
       if (response.data) {
         return response.data;
       }
