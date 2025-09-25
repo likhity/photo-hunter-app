@@ -10,11 +10,14 @@ import {
   Image,
   Alert,
   RefreshControl,
+  SafeAreaView,
 } from 'react-native';
 
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 import { useUser } from '~/providers/UserProvider';
-import photoHuntService, { PhotoHunt } from '~/services/photoHuntService';
+import apiClient from '~/services/apiClient';
+import photoHuntService from '~/services/photoHuntService';
+import { PhotoHunt } from '~/types/api';
 
 interface MyPhotoHuntsScreenProps {
   onClose: () => void;
@@ -29,10 +32,16 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
   const { user } = useUser();
   const [myPhotoHunts, setMyPhotoHunts] = useState<PhotoHunt[]>([]);
 
+  // Debug logs
+  console.log('MyPhotoHuntsScreen: Component rendered, user:', !!user, 'fontsLoaded:', fontsLoaded);
+
   useEffect(() => {
     const fetchUserPhotoHunts = async () => {
       if (user) {
         try {
+          // Ensure API client is initialized before making requests
+          await apiClient.waitForInitialization();
+
           // Get user-specific photo hunts
           const userPhotoHunts = await photoHuntService.getUserPhotoHunts();
           setMyPhotoHunts(userPhotoHunts);
@@ -49,6 +58,9 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
+      // Ensure API client is initialized before making requests
+      await apiClient.waitForInitialization();
+
       await refreshPhotoHunts();
       if (user) {
         const userPhotoHunts = await photoHuntService.getUserPhotoHunts();
@@ -94,15 +106,30 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
   };
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={onClose}>
+            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.title}>My PhotoHunts</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.content}>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Loading...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onClose}>
-          <MaterialIcons name="arrow-back" size={24} color="#374151" />
+          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.title}>My PhotoHunts</Text>
         <View style={styles.placeholder} />
@@ -111,11 +138,18 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
       {/* Content */}
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            colors={['#FFFFFF']}
+          />
+        }
         showsVerticalScrollIndicator={false}>
         {myPhotoHunts.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="photo-library" size={64} color="#D1D5DB" />
+            <MaterialIcons name="photo-library" size={64} color="#FFFFFF" />
             <Text style={styles.emptyTitle}>No PhotoHunts Yet</Text>
             <Text style={styles.emptySubtitle}>Create your first PhotoHunt to get started!</Text>
           </View>
@@ -160,13 +194,13 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
                     <TouchableOpacity
                       style={styles.actionButton}
                       onPress={() => handleEditPhotoHunt(photoHunt)}>
-                      <MaterialIcons name="edit" size={20} color="#6B7280" />
+                      <MaterialIcons name="edit" size={20} color="#FFFFFF" />
                       <Text style={styles.actionText}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.deleteButton]}
                       onPress={() => handleDeletePhotoHunt(photoHunt)}>
-                      <MaterialIcons name="delete" size={20} color="#DC2626" />
+                      <MaterialIcons name="delete" size={20} color="#FFFFFF" />
                       <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
                     </TouchableOpacity>
                   </View>
@@ -175,24 +209,22 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E14545',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   backButton: {
     padding: 8,
@@ -201,7 +233,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
   },
   placeholder: {
     width: 40,
@@ -220,14 +252,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 24,
     fontWeight: '700',
-    color: '#374151',
+    color: '#FFFFFF',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontFamily: 'Sen',
     fontSize: 16,
-    color: '#6B7280',
+    color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -235,15 +267,15 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   photoHuntCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E14545',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -261,20 +293,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   photoHuntDescription: {
     fontFamily: 'Sen',
     fontSize: 14,
-    color: '#6B7280',
+    color: '#FFFFFF',
     marginBottom: 8,
     lineHeight: 20,
   },
   photoHuntDate: {
     fontFamily: 'Sen',
     fontSize: 12,
-    color: '#9CA3AF',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   photoHuntStatus: {
     alignItems: 'flex-end',
@@ -309,19 +341,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   deleteButton: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(220, 38, 38, 0.3)',
+    borderColor: 'rgba(220, 38, 38, 0.5)',
   },
   actionText: {
     fontFamily: 'Sen',
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#FFFFFF',
     marginLeft: 6,
   },
   deleteText: {
-    color: '#DC2626',
+    color: '#FFFFFF',
   },
 });

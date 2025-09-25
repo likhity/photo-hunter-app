@@ -9,6 +9,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 
 import { useAnimation } from '~/providers/AnimationProvider';
@@ -48,14 +49,29 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
   };
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={onClose}>
+            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Animation Config</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.content}>
+          <View style={styles.loadingState}>
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onClose}>
-          <MaterialIcons name="arrow-back" size={24} color="#374151" />
+          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Animation Config</Text>
         <View style={styles.placeholder} />
@@ -68,10 +84,11 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
             style={styles.input}
             value={tempConfig.duration.toString()}
             onChangeText={(text) =>
-              setTempConfig((prev) => ({ ...prev, duration: parseInt(text) || 2000 }))
+              setTempConfig((prev) => ({ ...prev, duration: parseInt(text, 10) || 2000 }))
             }
             keyboardType="numeric"
             placeholder="Duration in ms"
+            placeholderTextColor="rgba(255, 255, 255, 0.6)"
           />
         </View>
 
@@ -85,6 +102,7 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
             }
             keyboardType="numeric"
             placeholder="Final scale multiplier"
+            placeholderTextColor="rgba(255, 255, 255, 0.6)"
           />
         </View>
 
@@ -99,7 +117,7 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
               onChangeText={(text) =>
                 setTempConfig((prev) => ({
                   ...prev,
-                  phases: { ...prev.phases, iconAppear: parseInt(text) || 800 },
+                  phases: { ...prev.phases, iconAppear: parseInt(text, 10) || 800 },
                 }))
               }
               keyboardType="numeric"
@@ -114,7 +132,7 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
               onChangeText={(text) =>
                 setTempConfig((prev) => ({
                   ...prev,
-                  phases: { ...prev.phases, hold: parseInt(text) || 400 },
+                  phases: { ...prev.phases, hold: parseInt(text, 10) || 400 },
                 }))
               }
               keyboardType="numeric"
@@ -129,7 +147,7 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
               onChangeText={(text) =>
                 setTempConfig((prev) => ({
                   ...prev,
-                  phases: { ...prev.phases, expand: parseInt(text) || 600 },
+                  phases: { ...prev.phases, expand: parseInt(text, 10) || 600 },
                 }))
               }
               keyboardType="numeric"
@@ -144,7 +162,7 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
               onChangeText={(text) =>
                 setTempConfig((prev) => ({
                   ...prev,
-                  phases: { ...prev.phases, fadeOut: parseInt(text) || 300 },
+                  phases: { ...prev.phases, fadeOut: parseInt(text, 10) || 300 },
                 }))
               }
               keyboardType="numeric"
@@ -166,23 +184,21 @@ export default function AnimationConfigScreen({ onClose }: AnimationConfigScreen
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E14545',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   backButton: {
     padding: 8,
@@ -192,7 +208,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
   },
   placeholder: {
     width: 40,
@@ -201,6 +217,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
   },
+  loadingState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  loadingText: {
+    fontFamily: 'Sen',
+    fontSize: 18,
+    color: '#FFFFFF',
+  },
   section: {
     marginVertical: 16,
   },
@@ -208,17 +235,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
+    color: '#FFFFFF',
     marginBottom: 12,
   },
   input: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
     fontFamily: 'Sen',
+    color: '#FFFFFF',
   },
   phaseRow: {
     flexDirection: 'row',
@@ -228,30 +257,32 @@ const styles = StyleSheet.create({
   phaseLabel: {
     fontFamily: 'Sen',
     fontSize: 16,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.8)',
     width: 100,
   },
   phaseInput: {
     flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 16,
     fontFamily: 'Sen',
+    color: '#FFFFFF',
     marginLeft: 12,
   },
   footer: {
     flexDirection: 'row',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
   },
   resetButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
@@ -261,7 +292,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#FFFFFF',
   },
   testButton: {
     flex: 1,

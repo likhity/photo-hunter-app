@@ -87,7 +87,10 @@ export default function UserMenu({
       icon: 'help',
       onPress: () => {
         // TODO: Implement help
-        Alert.alert('Coming Soon', 'Help & Support will be available soon!');
+        Alert.alert(
+          'Contact Us',
+          'Email us at support@photohunter.app for any questions, comments, or feedback!'
+        );
         onClose();
       },
     },

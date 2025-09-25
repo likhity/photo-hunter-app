@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useState, useRef } from 'react';
 import {
@@ -119,11 +120,15 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Text style={styles.closeButtonText}>
+                <MaterialIcons name="close" size={24} color="white" />
+              </Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Capture Photo</Text>
             <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
-              <Text style={styles.flipButtonText}>🔄</Text>
+              <Text style={styles.flipButtonText}>
+                <MaterialIcons name="flip-camera-ios" size={24} color="white" />
+              </Text>
             </TouchableOpacity>
           </View>
 

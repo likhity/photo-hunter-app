@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Alert, Image, View, Modal } from 'react-native';
+import { TouchableOpacity, StyleSheet, Alert, Image, View, Animated } from 'react-native';
 
 import plusIcon from '~/assets/plus-icon.png';
 import AnimationConfigScreen from '~/components/AnimationConfigScreen';
@@ -12,6 +12,7 @@ import CameraScreen from '~/components/CameraScreen';
 import CreatePhotoHuntSheet from '~/components/CreatePhotoHuntSheet';
 import Map from '~/components/Map';
 import MyPhotoHuntsScreen from '~/components/MyPhotoHuntsScreen';
+import ProfileScreen from '~/components/ProfileScreen';
 import SelectedPhotoHuntSheet from '~/components/SelectedPhotoHuntSheet';
 import UserMenu from '~/components/UserMenu';
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
@@ -27,7 +28,67 @@ export default function Home() {
   const [photoHuntName, setPhotoHuntName] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMyPhotoHunts, setShowMyPhotoHunts] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [showAnimationConfig, setShowAnimationConfig] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const profileFadeAnim = useRef(new Animated.Value(0)).current;
+  const animationConfigFadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Debug state changes
+  useEffect(() => {
+    console.log('Home: showMyPhotoHunts state changed to:', showMyPhotoHunts);
+  }, [showMyPhotoHunts]);
+
+  useEffect(() => {
+    if (showMyPhotoHunts) {
+      console.log('Home: My PhotoHunts screen should be visible now');
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showMyPhotoHunts, fadeAnim]);
+
+  useEffect(() => {
+    if (showProfile) {
+      console.log('Home: Profile screen should be visible now');
+      Animated.timing(profileFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(profileFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showProfile, profileFadeAnim]);
+
+  useEffect(() => {
+    if (showAnimationConfig) {
+      console.log('Home: Animation Config screen should be visible now');
+      Animated.timing(animationConfigFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(animationConfigFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showAnimationConfig, animationConfigFadeAnim]);
   const createPhotoHuntSheetRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
   const { createPhotoHunt } = usePhotoHunt();
@@ -170,23 +231,56 @@ export default function Home() {
       <UserMenu
         isVisible={showUserMenu}
         onClose={() => setShowUserMenu(false)}
-        onMyPhotoHunts={() => setShowMyPhotoHunts(true)}
+        onMyPhotoHunts={() => {
+          console.log('Home: onMyPhotoHunts called, setting showMyPhotoHunts to true');
+          setShowMyPhotoHunts(true);
+        }}
         onProfile={() => {
-          // TODO: Implement profile screen
-          Alert.alert('Coming Soon', 'Profile screen will be available soon!');
+          console.log('Home: onProfile called, setting showProfile to true');
+          setShowProfile(true);
         }}
         onAnimationConfig={() => setShowAnimationConfig(true)}
       />
 
-      {/* My PhotoHunts Modal */}
-      <Modal visible={showMyPhotoHunts} animationType="slide" presentationStyle="fullScreen">
-        <MyPhotoHuntsScreen onClose={() => setShowMyPhotoHunts(false)} />
-      </Modal>
+      {/* My PhotoHunts Full Screen */}
+      {showMyPhotoHunts && (
+        <Animated.View style={[styles.fullScreenOverlay, { opacity: fadeAnim }]}>
+          <MyPhotoHuntsScreen
+            onClose={() => {
+              console.log(
+                'Home: MyPhotoHuntsScreen onClose called, setting showMyPhotoHunts to false'
+              );
+              setShowMyPhotoHunts(false);
+            }}
+          />
+        </Animated.View>
+      )}
 
-      {/* Animation Config Modal */}
-      <Modal visible={showAnimationConfig} animationType="slide" presentationStyle="fullScreen">
-        <AnimationConfigScreen onClose={() => setShowAnimationConfig(false)} />
-      </Modal>
+      {/* Profile Full Screen */}
+      {showProfile && (
+        <Animated.View style={[styles.fullScreenOverlay, { opacity: profileFadeAnim }]}>
+          <ProfileScreen
+            onClose={() => {
+              console.log('Home: ProfileScreen onClose called, setting showProfile to false');
+              setShowProfile(false);
+            }}
+          />
+        </Animated.View>
+      )}
+
+      {/* Animation Config Full Screen */}
+      {showAnimationConfig && (
+        <Animated.View style={[styles.fullScreenOverlay, { opacity: animationConfigFadeAnim }]}>
+          <AnimationConfigScreen
+            onClose={() => {
+              console.log(
+                'Home: AnimationConfigScreen onClose called, setting showAnimationConfig to false'
+              );
+              setShowAnimationConfig(false);
+            }}
+          />
+        </Animated.View>
+      )}
     </>
   );
 }
@@ -200,6 +294,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 10,
     pointerEvents: 'box-none',
+  },
+  fullScreenOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100, // Higher than other overlays
+    backgroundColor: '#E14545',
   },
   fab: {
     position: 'absolute',
@@ -226,10 +329,10 @@ const styles = StyleSheet.create({
   menuButton: {
     position: 'absolute',
     top: 60,
-    left: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    left: 35,
+    width: 56,
+    height: 56,
+    borderRadius: 50,
     backgroundColor: '#E14545',
     justifyContent: 'center',
     alignItems: 'center',
