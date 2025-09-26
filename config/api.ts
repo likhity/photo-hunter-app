@@ -41,6 +41,9 @@ export const API_CONFIG = {
     PROFILE: {
       GET: '/profile/',
       UPDATE: '/profile/update/',
+      CHANGE_PASSWORD: '/profile/change-password/',
+      DELETE_ACCOUNT: '/profile/delete-account/',
+      PUBLIC: (userId: string) => `/users/${userId}/profile/`,
     },
 
     // Completions

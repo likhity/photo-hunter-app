@@ -68,13 +68,13 @@ export default function SignupStep1({ onNext, onBack, initialName = '' }: Signup
           <View style={styles.mainContent}>
             <Text style={styles.title}>What's your name?</Text>
             <Text style={styles.subtitle}>
-              This will be displayed on your profile and PhotoHunts
+              Select a username to be displayed on your profile and PhotoHunts.
             </Text>
 
             <View style={styles.inputContainer}>
               <GoogleStyleInput
                 ref={inputRef}
-                label="Full Name"
+                label="Username"
                 value={name}
                 onChangeText={setName}
                 error={error}

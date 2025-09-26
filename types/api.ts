@@ -17,6 +17,14 @@ export interface UserProfile {
   updated_at: string;
 }
 
+export interface PublicUserProfile {
+  name: string;
+  bio: string;
+  avatar: string | null;
+  total_completions: number;
+  total_created: number;
+}
+
 export interface PhotoHunt {
   id: string;
   name: string;
@@ -24,8 +32,11 @@ export interface PhotoHunt {
   latitude: number;
   longitude: number;
   reference_image: string | null;
+  difficulty?: number; // Float from 0-5
+  hint?: string; // Optional hint text
   created_by: string;
   created_by_name: string;
+  created_by_avatar?: string; // Optional avatar URL for the creator
   is_user_generated: boolean;
   is_active: boolean;
   created_at: string;
@@ -83,6 +94,8 @@ export interface PhotoHuntCreateRequest {
   latitude: number;
   longitude: number;
   reference_image?: string;
+  difficulty?: number; // Float from 0-5
+  hint?: string; // Optional hint text
 }
 
 export interface PhotoHuntCreateFormData {
@@ -95,6 +108,8 @@ export interface PhotoHuntCreateFormData {
     type: string;
     name: string;
   };
+  difficulty?: number; // Float from 0-5
+  hint?: string; // Optional hint text
 }
 
 export interface PhotoSubmissionRequest {
@@ -131,6 +146,28 @@ export interface PhotoHuntListParams {
   search?: string;
   page?: number;
   page_size?: number;
+}
+
+// Profile update requests
+export interface ProfileUpdateRequest {
+  name?: string;
+  bio?: string;
+}
+
+export interface ProfileUpdateWithAvatarRequest {
+  name?: string;
+  bio?: string;
+  avatar_file?: {
+    uri: string;
+    type: string;
+    name: string;
+  };
+}
+
+export interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+  new_password_confirm: string;
 }
 
 // Error response from API

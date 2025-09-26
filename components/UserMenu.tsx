@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import { useState } from 'react';
 import {
   View,
   Text,
@@ -19,7 +18,7 @@ interface UserMenuProps {
   onClose: () => void;
   onMyPhotoHunts: () => void;
   onProfile: () => void;
-  onAnimationConfig: () => void;
+  onSettings: () => void;
 }
 
 export default function UserMenu({
@@ -27,12 +26,12 @@ export default function UserMenu({
   onClose,
   onMyPhotoHunts,
   onProfile,
-  onAnimationConfig,
+  onSettings,
 }: UserMenuProps) {
   const [fontsLoaded] = useFonts({
     Sen: require('~/assets/fonts/Sen-VariableFont_wght.ttf'),
   });
-  const { user, logout } = useUser();
+  const { user, profile, logout } = useUser();
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -44,7 +43,7 @@ export default function UserMenu({
           try {
             await logout();
             onClose();
-          } catch (error) {
+          } catch {
             Alert.alert('Error', 'Failed to logout. Please try again.');
           }
         },
@@ -76,8 +75,7 @@ export default function UserMenu({
       title: 'Settings',
       icon: 'settings',
       onPress: () => {
-        // TODO: Implement settings
-        Alert.alert('Coming Soon', 'Settings feature will be available soon!');
+        onSettings();
         onClose();
       },
     },
@@ -91,15 +89,6 @@ export default function UserMenu({
           'Contact Us',
           'Email us at support@photohunter.app for any questions, comments, or feedback!'
         );
-        onClose();
-      },
-    },
-    {
-      id: 'animation-config',
-      title: 'Animation Settings',
-      icon: 'animation',
-      onPress: () => {
-        onAnimationConfig();
         onClose();
       },
     },
@@ -117,7 +106,13 @@ export default function UserMenu({
           <View style={styles.header}>
             <View style={styles.userInfo}>
               <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
+                {profile?.avatar ? (
+                  <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                )}
               </View>
               <View style={styles.userDetails}>
                 <Text style={styles.userName}>{user?.name || 'User'}</Text>
@@ -198,6 +193,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
   avatarText: {
     fontFamily: 'Sen',
     fontSize: 20,
@@ -256,7 +256,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 30,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },

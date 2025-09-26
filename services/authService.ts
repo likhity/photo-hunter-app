@@ -1,7 +1,17 @@
 import apiClient from './apiClient';
 
 import { API_CONFIG } from '~/config/api';
-import { User, LoginRequest, RegisterRequest, AuthResponse, UserProfile } from '~/types/api';
+import {
+  User,
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  UserProfile,
+  PublicUserProfile,
+  ProfileUpdateRequest,
+  ProfileUpdateWithAvatarRequest,
+  ChangePasswordRequest,
+} from '~/types/api';
 
 export interface LoginData {
   email: string;
@@ -151,6 +161,74 @@ class AuthService {
     }
   }
 
+  async updateProfileWithAvatar(profileData: ProfileUpdateWithAvatarRequest): Promise<UserProfile> {
+    try {
+      if (profileData.avatar_file) {
+        // Use multipart form data for avatar upload
+        const response = await apiClient.uploadFile<UserProfile>(
+          API_CONFIG.ENDPOINTS.PROFILE.UPDATE,
+          profileData.avatar_file,
+          {
+            name: profileData.name,
+            bio: profileData.bio,
+          },
+          'avatar_file',
+          'PATCH'
+        );
+
+        if (response.data) {
+          // Update current user if profile was updated
+          if (response.data.user) {
+            this.currentUser = response.data.user;
+          }
+          return response.data;
+        }
+        throw new Error('Failed to update profile with avatar');
+      } else {
+        // Use regular JSON update if no avatar
+        return this.updateProfile({
+          name: profileData.name,
+          bio: profileData.bio,
+        } as Partial<UserProfile>);
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to update profile');
+    }
+  }
+
+  async changePassword(passwordData: ChangePasswordRequest): Promise<void> {
+    try {
+      const response = await apiClient.post<{ message: string }>(
+        API_CONFIG.ENDPOINTS.PROFILE.CHANGE_PASSWORD,
+        passwordData
+      );
+
+      if (!response.data) {
+        throw new Error('Failed to change password');
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to change password');
+    }
+  }
+
+  async deleteAccount(): Promise<void> {
+    try {
+      const response = await apiClient.delete<{ message: string }>(
+        API_CONFIG.ENDPOINTS.PROFILE.DELETE_ACCOUNT
+      );
+
+      // Clear auth state after successful deletion
+      this.currentUser = null;
+      this.isAuthenticated = false;
+
+      if (!response.data) {
+        throw new Error('Failed to delete account');
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to delete account');
+    }
+  }
+
   getCurrentUser(): User | null {
     return this.currentUser;
   }
@@ -184,6 +262,23 @@ class AuthService {
       this.currentUser = null;
       this.isAuthenticated = false;
       return false;
+    }
+  }
+
+  // Get public profile for any user
+  async getPublicProfile(userId: string): Promise<PublicUserProfile> {
+    try {
+      const response = await apiClient.get<PublicUserProfile>(
+        API_CONFIG.ENDPOINTS.PROFILE.PUBLIC(userId)
+      );
+
+      if (!response.data) {
+        throw new Error('Failed to get public profile');
+      }
+
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to get public profile');
     }
   }
 }

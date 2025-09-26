@@ -7,13 +7,13 @@ import { useRef, useState, useEffect } from 'react';
 import { TouchableOpacity, StyleSheet, Alert, Image, View, Animated } from 'react-native';
 
 import plusIcon from '~/assets/plus-icon.png';
-import AnimationConfigScreen from '~/components/AnimationConfigScreen';
 import CameraScreen from '~/components/CameraScreen';
 import CreatePhotoHuntSheet from '~/components/CreatePhotoHuntSheet';
 import Map from '~/components/Map';
 import MyPhotoHuntsScreen from '~/components/MyPhotoHuntsScreen';
 import ProfileScreen from '~/components/ProfileScreen';
 import SelectedPhotoHuntSheet from '~/components/SelectedPhotoHuntSheet';
+import SettingsScreen from '~/components/SettingsScreen';
 import UserMenu from '~/components/UserMenu';
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 import { useUser } from '~/providers/UserProvider';
@@ -29,10 +29,10 @@ export default function Home() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMyPhotoHunts, setShowMyPhotoHunts] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showAnimationConfig, setShowAnimationConfig] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const profileFadeAnim = useRef(new Animated.Value(0)).current;
-  const animationConfigFadeAnim = useRef(new Animated.Value(0)).current;
+  const settingsFadeAnim = useRef(new Animated.Value(0)).current;
 
   // Debug state changes
   useEffect(() => {
@@ -74,21 +74,22 @@ export default function Home() {
   }, [showProfile, profileFadeAnim]);
 
   useEffect(() => {
-    if (showAnimationConfig) {
-      console.log('Home: Animation Config screen should be visible now');
-      Animated.timing(animationConfigFadeAnim, {
+    if (showSettings) {
+      console.log('Home: Settings screen should be visible now');
+      Animated.timing(settingsFadeAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
     } else {
-      Animated.timing(animationConfigFadeAnim, {
+      Animated.timing(settingsFadeAnim, {
         toValue: 0,
         duration: 200,
         useNativeDriver: true,
       }).start();
     }
-  }, [showAnimationConfig, animationConfigFadeAnim]);
+  }, [showSettings, settingsFadeAnim]);
+
   const createPhotoHuntSheetRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
   const { createPhotoHunt } = usePhotoHunt();
@@ -239,7 +240,10 @@ export default function Home() {
           console.log('Home: onProfile called, setting showProfile to true');
           setShowProfile(true);
         }}
-        onAnimationConfig={() => setShowAnimationConfig(true)}
+        onSettings={() => {
+          console.log('Home: onSettings called, setting showSettings to true');
+          setShowSettings(true);
+        }}
       />
 
       {/* My PhotoHunts Full Screen */}
@@ -268,15 +272,13 @@ export default function Home() {
         </Animated.View>
       )}
 
-      {/* Animation Config Full Screen */}
-      {showAnimationConfig && (
-        <Animated.View style={[styles.fullScreenOverlay, { opacity: animationConfigFadeAnim }]}>
-          <AnimationConfigScreen
+      {/* Settings Full Screen */}
+      {showSettings && (
+        <Animated.View style={[styles.fullScreenOverlay, { opacity: settingsFadeAnim }]}>
+          <SettingsScreen
             onClose={() => {
-              console.log(
-                'Home: AnimationConfigScreen onClose called, setting showAnimationConfig to false'
-              );
-              setShowAnimationConfig(false);
+              console.log('Home: SettingsScreen onClose called, setting showSettings to false');
+              setShowSettings(false);
             }}
           />
         </Animated.View>

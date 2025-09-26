@@ -23,6 +23,8 @@ export interface CreatePhotoHuntData {
         type: string;
         name: string;
       };
+  difficulty?: number; // Float from 0-5
+  hint?: string; // Optional hint text
 }
 
 class PhotoHuntService {
@@ -105,6 +107,8 @@ class PhotoHuntService {
             description: data.description,
             lat: data.lat,
             long: data.long,
+            difficulty: data.difficulty,
+            hint: data.hint,
           }
         );
 
@@ -120,6 +124,8 @@ class PhotoHuntService {
           latitude: data.lat,
           longitude: data.long,
           reference_image: data.referenceImage as string,
+          difficulty: data.difficulty,
+          hint: data.hint,
         };
 
         // Log the request data being sent
@@ -179,7 +185,7 @@ class PhotoHuntService {
     }
   }
 
-  // Update PhotoHunt
+  // Update PhotoHunt (text fields only)
   async updatePhotoHunt(id: string, data: Partial<CreatePhotoHuntData>): Promise<PhotoHunt> {
     try {
       const requestData: Partial<PhotoHuntCreateRequest> = {};
@@ -188,7 +194,10 @@ class PhotoHuntService {
       if (data.description) requestData.description = data.description;
       if (data.lat !== undefined) requestData.latitude = data.lat;
       if (data.long !== undefined) requestData.longitude = data.long;
-      if (data.referenceImage !== undefined) requestData.reference_image = data.referenceImage;
+      if (data.referenceImage !== undefined)
+        requestData.reference_image = data.referenceImage as string;
+      if (data.difficulty !== undefined) requestData.difficulty = data.difficulty;
+      if (data.hint !== undefined) requestData.hint = data.hint;
 
       const response = await apiClient.patch<PhotoHunt>(
         API_CONFIG.ENDPOINTS.PHOTOHUNTS.UPDATE(id),
@@ -198,6 +207,50 @@ class PhotoHuntService {
         return response.data;
       }
       throw new Error('Failed to update PhotoHunt');
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to update PhotoHunt');
+    }
+  }
+
+  // Update PhotoHunt with image replacement
+  async updatePhotoHuntWithImage(
+    id: string,
+    data: Partial<CreatePhotoHuntData>
+  ): Promise<PhotoHunt> {
+    try {
+      // Check if referenceImage is a file object (for multipart upload) or string (for URL)
+      const isFileObject =
+        data.referenceImage &&
+        typeof data.referenceImage === 'object' &&
+        'uri' in data.referenceImage;
+
+      if (isFileObject) {
+        // Use multipart form data for file upload
+        const file = data.referenceImage as { uri: string; type: string; name: string };
+
+        const response = await apiClient.uploadFile<PhotoHunt>(
+          API_CONFIG.ENDPOINTS.PHOTOHUNTS.UPDATE(id),
+          file,
+          {
+            name: data.name,
+            description: data.description,
+            lat: data.lat,
+            long: data.long,
+            difficulty: data.difficulty,
+            hint: data.hint,
+          },
+          'reference_image_file',
+          'PATCH'
+        );
+
+        if (response.data) {
+          return response.data;
+        }
+        throw new Error('Failed to update PhotoHunt with image');
+      } else {
+        // Use regular update if no image file
+        return this.updatePhotoHunt(id, data);
+      }
     } catch (error: any) {
       throw new Error(error.message || 'Failed to update PhotoHunt');
     }

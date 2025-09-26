@@ -1,5 +1,5 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
 import cameraIcon from '~/assets/camera-icon.png';
 import CameraScreen from '~/components/CameraScreen';
 import PhotoValidationScreen from '~/components/PhotoValidationScreen';
+import PublicProfileScreen from '~/components/PublicProfileScreen';
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
 import { calculateDistance, formatDistance } from '~/utils/distance';
 
@@ -26,12 +27,14 @@ export default function SelectedPhotoHuntSheet() {
   const [showCamera, setShowCamera] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string>('');
+  const [showHint, setShowHint] = useState(false);
+  const [showPublicProfile, setShowPublicProfile] = useState(false);
 
   useEffect(() => {
     if (selectedPhotoHunt) {
       calculateDistanceToPhotoHunt();
       setTimeout(() => {
-        bottomSheetRef.current?.expand();
+        bottomSheetRef.current?.snapToIndex(0);
       }, 50);
     } else {
       bottomSheetRef.current?.close();
@@ -182,76 +185,163 @@ export default function SelectedPhotoHuntSheet() {
   const buttonText = isHunted ? 'Hunt Again' : "Let's Hunt!";
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      index={-1}
-      snapPoints={[280]}
-      enablePanDownToClose
-      backgroundStyle={[styles.bottomSheetBackground, { backgroundColor }]}
-      handleIndicatorStyle={styles.handleIndicator}
-      onClose={() => {
-        setSelectedPhotoHunt(null);
-      }}>
-      {selectedPhotoHunt && (
-        <BottomSheetView style={styles.container}>
-          {/* Header with distance */}
-          <View style={styles.header}>
-            <View style={styles.titleContainer}>
-              <Text style={styles.title}>{selectedPhotoHunt.name}</Text>
-              <Text style={styles.description}>{selectedPhotoHunt.description}</Text>
-            </View>
-            <View style={styles.distanceContainer}>
-              <MaterialIcons
-                name="location-on"
-                size={16}
-                color="white"
-                style={styles.distanceIcon}
-              />
-              <Text style={styles.distance}>{distance}</Text>
-            </View>
-          </View>
-
-          {/* Navigation section */}
-          <View style={styles.navigationSection}>
-            <View style={[styles.horizontalLine, { marginBottom: 20 }]} />
-
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionIconContainer}>
-                <MaterialIcons name="navigation" size={20} color="white" />
+    <>
+      {/* Public Profile Screen */}
+      <PublicProfileScreen
+        isVisible={showPublicProfile}
+        onClose={() => setShowPublicProfile(false)}
+        userId={selectedPhotoHunt.created_by}
+      />
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={-1}
+        snapPoints={['45%', '75%']}
+        enablePanDownToClose
+        backgroundStyle={[styles.bottomSheetBackground, { backgroundColor }]}
+        handleIndicatorStyle={styles.handleIndicator}
+        onClose={() => {
+          setSelectedPhotoHunt(null);
+        }}>
+        {selectedPhotoHunt && (
+          <BottomSheetScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+            {/* Header with distance */}
+            <View style={styles.header}>
+              <View style={styles.titleContainer}>
+                <Text style={styles.title}>{selectedPhotoHunt.name}</Text>
+                <Text style={styles.description}>{selectedPhotoHunt.description}</Text>
               </View>
-              <Text style={styles.sectionTitle}>Navigate</Text>
+              <View style={styles.distanceContainer}>
+                <MaterialIcons
+                  name="location-on"
+                  size={16}
+                  color="white"
+                  style={styles.distanceIcon}
+                />
+                <Text style={styles.distance}>{distance}</Text>
+              </View>
             </View>
 
-            <View style={styles.navigationButtonsContainer}>
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity style={styles.navigationButton} onPress={openInAppleMaps}>
-                  <Text style={styles.navigationButtonText}>Apple Maps</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity style={styles.navigationButton} onPress={openInGoogleMaps}>
-                <Text style={styles.navigationButtonText}>Google Maps</Text>
+            {/* Creator Info Section */}
+            <View style={styles.creatorSection}>
+              <TouchableOpacity
+                style={styles.creatorContainer}
+                onPress={() => setShowPublicProfile(true)}
+                activeOpacity={0.7}>
+                <View style={styles.creatorAvatar}>
+                  {selectedPhotoHunt.created_by_avatar ? (
+                    <Image
+                      source={{ uri: selectedPhotoHunt.created_by_avatar }}
+                      style={styles.creatorAvatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.creatorAvatarText}>
+                      {selectedPhotoHunt.created_by_name?.charAt(0).toUpperCase() || 'U'}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.creatorInfo}>
+                  <Text style={styles.creatorLabel}>Created by</Text>
+                  <Text style={styles.creatorName}>{selectedPhotoHunt.created_by_name}</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={20} color="rgba(255, 255, 255, 0.7)" />
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.horizontalLine, { marginTop: 30 }]} />
-          </View>
+            {/* Difficulty Section */}
+            {selectedPhotoHunt.difficulty && (
+              <View style={styles.difficultySection}>
+                <View style={styles.difficultyRow}>
+                  <View style={[styles.sectionHeader, styles.difficultyLabel]}>
+                    <View style={styles.sectionIconContainer}>
+                      <Ionicons name="bar-chart-outline" size={20} color="white" />
+                    </View>
+                    <Text style={styles.sectionTitle}>Difficulty</Text>
+                  </View>
+                  <View style={styles.difficultyStars}>
+                    {[1, 2, 3, 4, 5].map((level) => (
+                      <Ionicons
+                        key={level}
+                        name="star"
+                        size={18}
+                        color={
+                          selectedPhotoHunt.difficulty! >= level
+                            ? '#FFFFFF'
+                            : 'rgba(255, 255, 255, 0.3)'
+                        }
+                        style={styles.difficultyStar}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
 
-          {/* Hunt button */}
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: isHunted ? '#4CAF50' : '#E14545' }]}
-            onPress={handleTakePhoto}>
-            <View style={styles.actionButtonContent}>
-              <Image source={cameraIcon} style={styles.cameraIcon} />
-              <Text style={styles.actionButtonText}>{buttonText}</Text>
+            {/* Hint Section */}
+            {selectedPhotoHunt.hint && (
+              <View style={styles.hintSection}>
+                <TouchableOpacity style={styles.hintHeader} onPress={() => setShowHint(!showHint)}>
+                  <View style={styles.sectionHeader}>
+                    <View style={styles.sectionIconContainer}>
+                      <Ionicons name="bulb-outline" size={20} color="white" />
+                    </View>
+                    <Text style={styles.sectionTitle}>Hint</Text>
+                  </View>
+                  <Ionicons
+                    name={showHint ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
+                {showHint && (
+                  <View style={styles.hintContent}>
+                    <Text style={styles.hintText}>{selectedPhotoHunt.hint}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Navigation section */}
+            <View style={styles.navigationSection}>
+              <View style={[styles.horizontalLine, { marginBottom: 20 }]} />
+
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIconContainer}>
+                  <MaterialIcons name="navigation" size={20} color="white" />
+                </View>
+                <Text style={styles.sectionTitle}>Navigate</Text>
+              </View>
+
+              <View style={styles.navigationButtonsContainer}>
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity style={styles.navigationButton} onPress={openInAppleMaps}>
+                    <Text style={styles.navigationButtonText}>Apple Maps</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity style={styles.navigationButton} onPress={openInGoogleMaps}>
+                  <Text style={styles.navigationButtonText}>Google Maps</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.horizontalLine, { marginTop: 30 }]} />
             </View>
-          </TouchableOpacity>
 
-          {/* Bottom tail pointer */}
-          <View style={[styles.tail, { borderTopColor: backgroundColor }]} />
-        </BottomSheetView>
-      )}
-    </BottomSheet>
+            {/* Hunt button */}
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: isHunted ? '#4CAF50' : '#E14545' }]}
+              onPress={handleTakePhoto}>
+              <View style={styles.actionButtonContent}>
+                <Image source={cameraIcon} style={styles.cameraIcon} />
+                <Text style={styles.actionButtonText}>{buttonText}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Bottom tail pointer */}
+            <View style={[styles.tail, { borderTopColor: backgroundColor }]} />
+          </BottomSheetScrollView>
+        )}
+      </BottomSheet>
+    </>
   );
 }
 
@@ -406,5 +496,98 @@ const styles = StyleSheet.create({
     borderTopWidth: 10,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
+  },
+  // Creator Section Styles
+  creatorSection: {
+    marginVertical: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  creatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  creatorAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  creatorAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  creatorAvatarText: {
+    fontSize: 16,
+    fontFamily: 'Sen',
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  creatorInfo: {
+    flex: 1,
+  },
+  creatorLabel: {
+    fontSize: 12,
+    fontFamily: 'Sen',
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 2,
+  },
+  creatorName: {
+    fontSize: 16,
+    fontFamily: 'Sen',
+    fontWeight: '600',
+    color: 'white',
+  },
+  // Difficulty Section Styles
+  difficultySection: {
+    marginBottom: 16,
+  },
+  difficultyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 24,
+  },
+  difficultyLabel: {
+    marginTop: 10,
+  },
+  difficultyStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  difficultyStar: {
+    marginHorizontal: 1,
+  },
+  // Hint Section Styles
+  hintSection: {
+    marginBottom: 16,
+  },
+  hintHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  hintContent: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  hintText: {
+    fontSize: 14,
+    fontFamily: 'Sen',
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
 });

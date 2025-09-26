@@ -5,11 +5,13 @@ import LineRoute from './LineRoute';
 import PhotoHuntMarkers from './PhotoHuntMarkers';
 
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
+import { useSettings } from '~/providers/SettingsProvider';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '');
 
 const Map = forwardRef<any, object>((props, ref) => {
   const { directionCoordinates } = usePhotoHunt();
+  const { mapStyle } = useSettings();
   const cameraRef = useRef<Camera>(null);
   const [followUserLocation, setFollowUserLocation] = useState(true);
 
@@ -43,7 +45,7 @@ const Map = forwardRef<any, object>((props, ref) => {
       <MapView
         style={{ flex: 1 }}
         scaleBarPosition={{ bottom: 50, right: 50 }}
-        styleURL="mapbox://styles/mapbox/dark-v11">
+        styleURL={mapStyle.url}>
         <Camera ref={cameraRef} followUserLocation={followUserLocation} followZoomLevel={13} />
         <LocationPuck puckBearing="heading" puckBearingEnabled pulsing={{ isEnabled: true }} />
 

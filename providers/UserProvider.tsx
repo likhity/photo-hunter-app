@@ -1,7 +1,12 @@
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 
 import authService, { LoginData, SignupData } from '~/services/authService';
-import { User, UserProfile } from '~/types/api';
+import {
+  User,
+  UserProfile,
+  ProfileUpdateWithAvatarRequest,
+  ChangePasswordRequest,
+} from '~/types/api';
 
 interface UserContextType {
   user: User | null;
@@ -13,6 +18,9 @@ interface UserContextType {
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   updateProfile: (profileData: Partial<UserProfile>) => Promise<void>;
+  updateProfileWithAvatar: (profileData: ProfileUpdateWithAvatarRequest) => Promise<void>;
+  changePassword: (passwordData: ChangePasswordRequest) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -25,6 +33,9 @@ const UserContext = createContext<UserContextType>({
   logout: async () => {},
   refreshAuth: async () => {},
   updateProfile: async () => {},
+  updateProfileWithAvatar: async () => {},
+  changePassword: async () => {},
+  deleteAccount: async () => {},
 });
 
 export default function UserProvider({ children }: PropsWithChildren) {
@@ -219,6 +230,50 @@ export default function UserProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const updateProfileWithAvatar = async (profileData: ProfileUpdateWithAvatarRequest) => {
+    try {
+      setIsLoading(true);
+      const updatedProfile = await authService.updateProfileWithAvatar(profileData);
+      setProfile(updatedProfile);
+
+      // Update user data if it was changed
+      if (updatedProfile.user) {
+        setUser(updatedProfile.user);
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async (passwordData: ChangePasswordRequest) => {
+    try {
+      setIsLoading(true);
+      await authService.changePassword(passwordData);
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    try {
+      setIsLoading(true);
+      await authService.deleteAccount();
+
+      // Clear all state after successful deletion
+      setUser(null);
+      setProfile(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -231,6 +286,9 @@ export default function UserProvider({ children }: PropsWithChildren) {
         logout,
         refreshAuth,
         updateProfile,
+        updateProfileWithAvatar,
+        changePassword,
+        deleteAccount,
       }}>
       {children}
     </UserContext.Provider>

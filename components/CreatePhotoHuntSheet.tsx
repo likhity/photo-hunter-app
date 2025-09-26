@@ -22,6 +22,8 @@ interface CreatePhotoHuntSheetProps {
     lat: number;
     long: number;
     referenceImage: string | { uri: string; type: string; name: string };
+    difficulty?: number;
+    hint?: string;
   }) => void;
   onSheetChange?: (isOpen: boolean) => void;
   onCameraOpen?: () => void;
@@ -43,6 +45,8 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
       string | { uri: string; type: string; name: string } | null
     >(null);
     const [location, setLocation] = useState<{ lat: number; long: number } | null>(null);
+    const [difficulty, setDifficulty] = useState<number>(2.5);
+    const [hint, setHint] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const bottomSheetRef = useRef<BottomSheet>(null);
 
@@ -100,6 +104,8 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
       setDescription('');
       setReferenceImage(null);
       setLocation(null);
+      setDifficulty(2.5);
+      setHint('');
     };
 
     const handleSubmit = async () => {
@@ -134,6 +140,8 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
           lat: location.lat,
           long: location.long,
           referenceImage,
+          difficulty,
+          hint: hint.trim() || undefined,
         });
 
         // Reset form only after successful submission
@@ -206,6 +214,53 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
               placeholderTextColor="rgba(255, 255, 255, 0.6)"
               multiline
               numberOfLines={4}
+            />
+          </View>
+
+          {/* Difficulty Selector */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelContainer}>
+              <Ionicons name="bar-chart-outline" size={20} color="white" />
+              <Text style={styles.label}>Difficulty</Text>
+            </View>
+            <View style={styles.difficultyContainer}>
+              <Text style={styles.difficultyValue}>{difficulty.toFixed(1)} / 5.0</Text>
+              <View style={styles.difficultyButtons}>
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <TouchableOpacity
+                    key={level}
+                    style={[
+                      styles.difficultyButton,
+                      difficulty >= level && styles.difficultyButtonActive,
+                    ]}
+                    onPress={() => setDifficulty(level)}>
+                    <Ionicons
+                      name="star"
+                      size={20}
+                      color={difficulty >= level ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)'}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.difficultyLabels}>
+                <Text style={styles.difficultyLabel}>Easy</Text>
+                <Text style={styles.difficultyLabel}>Hard</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Hint Input */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelContainer}>
+              <Ionicons name="bulb-outline" size={20} color="white" />
+              <Text style={styles.label}>Hint (Optional)</Text>
+            </View>
+            <TextInput
+              style={styles.textInput}
+              value={hint}
+              onChangeText={setHint}
+              placeholder="Give hunters a helpful clue..."
+              placeholderTextColor="rgba(255, 255, 255, 0.6)"
             />
           </View>
 
@@ -467,6 +522,45 @@ const styles = StyleSheet.create({
     color: '#E14545',
     fontSize: 18,
     fontWeight: '600',
+  },
+  difficultyContainer: {
+    alignItems: 'center',
+  },
+  difficultyValue: {
+    fontFamily: 'Sen',
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 12,
+  },
+  difficultyButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  difficultyButton: {
+    padding: 8,
+    marginHorizontal: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  difficultyButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  difficultyLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  difficultyLabel: {
+    fontFamily: 'Sen',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 });
 
