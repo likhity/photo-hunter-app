@@ -1,6 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useState, useRef } from 'react';
+import * as MediaLibrary from 'expo-media-library';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -26,6 +28,71 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
+  const [isLandscape, setIsLandscape] = useState<boolean>(width > height);
+  const [hasMediaPermission, setHasMediaPermission] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let subscription: ScreenOrientation.Subscription | null = null;
+
+    const subscribe = async () => {
+      try {
+        // Allow all but do not lock; we only listen and adapt UI
+        await ScreenOrientation.unlockAsync();
+
+        const current = await ScreenOrientation.getOrientationAsync();
+        setIsLandscape(
+          current === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+            current === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
+        );
+
+        subscription = ScreenOrientation.addOrientationChangeListener((event) => {
+          const o = event.orientationInfo.orientation;
+          const landscape =
+            o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+            o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT;
+          setIsLandscape(landscape);
+        });
+      } catch {
+        // Fallback to Dimensions if screen-orientation fails
+        const handler = ({ window }: { window: { width: number; height: number } }) => {
+          setIsLandscape(window.width > window.height);
+        };
+        const sub = Dimensions.addEventListener('change', handler);
+        subscription = {
+          remove: () => {
+            // @ts-ignore
+            sub?.remove?.();
+            // @ts-ignore
+            Dimensions.removeEventListener?.('change', handler);
+          },
+        } as unknown as ScreenOrientation.Subscription;
+      }
+    };
+
+    subscribe();
+
+    return () => {
+      if (subscription) {
+        ScreenOrientation.removeOrientationChangeListener(subscription);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await MediaLibrary.getPermissionsAsync();
+        if (status !== 'granted') {
+          const req = await MediaLibrary.requestPermissionsAsync();
+          setHasMediaPermission(req.status === 'granted');
+        } else {
+          setHasMediaPermission(true);
+        }
+      } catch {
+        setHasMediaPermission(false);
+      }
+    })();
+  }, []);
 
   if (!permission) {
     return <View />;
@@ -75,6 +142,24 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
     }
   };
 
+  const saveToCameraRoll = async () => {
+    if (!capturedPhoto) return;
+    try {
+      if (!hasMediaPermission) {
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Please allow access to save photos to your library.');
+          return;
+        }
+        setHasMediaPermission(true);
+      }
+      await MediaLibrary.saveToLibraryAsync(capturedPhoto);
+      Alert.alert('Saved', 'Photo saved to your camera roll.');
+    } catch {
+      Alert.alert('Error', 'Failed to save photo. Please try again.');
+    }
+  };
+
   const retakePhoto = () => {
     setCapturedPhoto(null);
   };
@@ -88,7 +173,7 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
         <View style={styles.previewContainer}>
-          <Image source={{ uri: capturedPhoto }} style={styles.previewImage} />
+          <Image source={{ uri: capturedPhoto }} style={styles.previewImage} resizeMode="contain" />
 
           <View style={styles.previewOverlay}>
             <View style={styles.previewHeader}>
@@ -97,14 +182,23 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
               <Text style={styles.previewSubtitle}>"{photoHuntName}"?</Text>
             </View>
 
-            <View style={styles.previewButtons}>
-              <TouchableOpacity style={styles.retakeButton} onPress={retakePhoto}>
-                <Text style={styles.retakeButtonText}>Retake</Text>
-              </TouchableOpacity>
+            <View style={styles.previewBottomContainer}>
+              <View style={styles.previewButtons}>
+                <TouchableOpacity style={styles.retakeButton} onPress={retakePhoto}>
+                  <Text style={styles.retakeButtonText}>Retake</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.confirmButton} onPress={confirmPhoto}>
-                <Text style={styles.confirmButtonText}>Confirm</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={confirmPhoto}>
+                  <Text style={styles.confirmButtonText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.previewSaveContainer}>
+                <TouchableOpacity style={styles.saveButton} onPress={saveToCameraRoll}>
+                  <MaterialIcons name="save-alt" size={18} color="white" style={styles.saveIcon} />
+                  <Text style={styles.saveButtonText}>Save to Camera Roll</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -118,7 +212,7 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
       <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
         <View style={styles.cameraOverlay}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, isLandscape && styles.headerLandscape]}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>
                 <MaterialIcons name="close" size={24} color="white" />
@@ -133,7 +227,7 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
           </View>
 
           {/* Center overlay with photo hunt name */}
-          <View style={styles.centerOverlay}>
+          <View style={[styles.centerOverlay, isLandscape && styles.centerOverlayLandscape]}>
             <View style={styles.photoHuntInfo}>
               <Text style={styles.photoHuntName}>{photoHuntName}</Text>
               <Text style={styles.instructionText}>Frame your shot and tap to capture</Text>
@@ -141,7 +235,7 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
           </View>
 
           {/* Bottom controls */}
-          <View style={styles.bottomControls}>
+          <View style={[styles.bottomControls, isLandscape && styles.bottomControlsLandscape]}>
             <View style={styles.captureButtonContainer}>
               <TouchableOpacity
                 style={[styles.captureButton, isCapturing && styles.captureButtonDisabled]}
@@ -176,6 +270,9 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 20,
+  },
+  headerLandscape: {
+    paddingTop: 20,
   },
   closeButton: {
     width: 40,
@@ -214,6 +311,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  centerOverlayLandscape: {
+    position: 'absolute',
+    left: 20,
+    top: '50%',
+    transform: [{ translateY: -60 }],
+    alignItems: 'flex-start',
+  },
   photoHuntInfo: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingHorizontal: 20,
@@ -239,6 +343,14 @@ const styles = StyleSheet.create({
   bottomControls: {
     paddingBottom: 50,
     paddingHorizontal: 20,
+  },
+  bottomControlsLandscape: {
+    position: 'absolute',
+    right: 20,
+    top: '50%',
+    transform: [{ translateY: -40 }],
+    paddingBottom: 0,
+    paddingHorizontal: 0,
   },
   captureButtonContainer: {
     alignItems: 'center',
@@ -268,9 +380,8 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     flex: 1,
-    width,
-    height,
-    resizeMode: 'cover',
+    width: '100%',
+    height: '100%',
   },
   previewOverlay: {
     position: 'absolute',
@@ -283,6 +394,13 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 50,
     paddingHorizontal: 20,
+  },
+  previewOverlayLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   previewHeader: {
     alignItems: 'center',
@@ -304,9 +422,20 @@ const styles = StyleSheet.create({
   },
   previewButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
+    gap: 30,
   },
+  previewSaveContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  previewBottomContainer: {
+    alignItems: 'center',
+    marginTop: 'auto',
+  },
+  // Removed landscape-specific preview layouts to keep portrait-like layout in landscape
   retakeButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 30,
@@ -314,6 +443,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 1,
     borderColor: 'white',
+    marginRight: 8,
   },
   retakeButtonText: {
     color: 'white',
@@ -326,8 +456,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,
+    marginLeft: 8,
   },
   confirmButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Sen',
+  },
+  saveButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'white',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  saveIcon: {
+    marginRight: 8,
+  },
+  saveButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',

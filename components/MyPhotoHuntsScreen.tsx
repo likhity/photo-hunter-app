@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import * as ImagePicker from 'expo-image-picker';
+// Removed ImagePicker to enforce camera-only image updates
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -14,6 +14,8 @@ import {
   SafeAreaView,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
@@ -171,66 +173,7 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
     }
   };
 
-  const handleChangeReferenceImage = async () => {
-    if (!editingPhotoHunt) return;
-
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to access your photos.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-
-        setIsUpdating(true);
-
-        await photoHuntService.updatePhotoHuntWithImage(editingPhotoHunt.id, {
-          name: editedName.trim(),
-          description: editedDescription.trim(),
-          difficulty: editedDifficulty,
-          hint: editedHint.trim() || undefined,
-          referenceImage: {
-            uri: imageUri,
-            type: 'image/jpeg',
-            name: `photohunt_${Date.now()}.jpg`,
-          },
-        });
-
-        // Fetch the complete updated PhotoHunt data instead of using partial response
-        const completeUpdatedPhotoHunt = await photoHuntService.getPhotoHuntById(
-          editingPhotoHunt.id
-        );
-        console.log(
-          'MyPhotoHuntsScreen: Complete updated PhotoHunt with image:',
-          JSON.stringify(completeUpdatedPhotoHunt, null, 2)
-        );
-
-        // Update local state with complete data
-        setMyPhotoHunts((prev) =>
-          prev.map((ph) => (ph.id === editingPhotoHunt.id ? completeUpdatedPhotoHunt : ph))
-        );
-
-        // Refresh global PhotoHunts
-        await refreshPhotoHunts();
-
-        Alert.alert('Success', 'Reference image updated successfully!');
-      }
-    } catch (error: any) {
-      console.error('Error updating reference image:', error);
-      Alert.alert('Error', error.message || 'Failed to update reference image');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  // Image changes are no longer allowed during edit
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -352,7 +295,10 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
         transparent
         animationType="slide"
         onRequestClose={() => setShowEditModal(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Edit PhotoHunt</Text>
@@ -363,7 +309,12 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerStyle={styles.modalScrollContent}>
               {/* Name Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Name</Text>
@@ -437,13 +388,6 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
                       style={styles.referenceImagePreview}
                       resizeMode="cover"
                     />
-                    <TouchableOpacity
-                      style={styles.changeImageButton}
-                      onPress={handleChangeReferenceImage}
-                      disabled={isUpdating}>
-                      <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
-                      <Text style={styles.changeImageText}>Change Image</Text>
-                    </TouchableOpacity>
                   </View>
                 </View>
               )}
@@ -466,7 +410,7 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -630,9 +574,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '85%',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    flex: 0,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -654,6 +599,10 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     maxHeight: 400,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   inputGroup: {
     marginBottom: 20,

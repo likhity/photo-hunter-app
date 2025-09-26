@@ -14,6 +14,8 @@ import {
   TextInput,
   Image,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import { useUser } from '~/providers/UserProvider';
@@ -197,166 +199,179 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
 
   if (!fontsLoaded) {
     return (
-      <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={onClose}>
+              <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.title}>Profile</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={styles.content}>
+            <View style={styles.loadingState}>
+              <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      enabled>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.title}>Profile</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => {
+              if (isEditing) {
+                handleSaveProfile();
+              } else {
+                setIsEditing(true);
+              }
+            }}>
+            <MaterialIcons name={isEditing ? 'check' : 'edit'} size={24} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-        <View style={styles.content}>
-          <View style={styles.loadingState}>
-            <Text style={styles.loadingText}>Loading...</Text>
+
+        {/* Content */}
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#FFFFFF"
+              colors={['#FFFFFF']}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+          scrollEventThrottle={16}
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets>
+          {/* Profile Avatar */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarContainer}>
+              {profile?.avatar ? (
+                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
+              )}
+            </View>
+            <TouchableOpacity style={styles.changeAvatarButton} onPress={handleChangeAvatar}>
+              <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
+              <Text style={styles.changeAvatarText}>Change Photo</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+
+          {/* Profile Information */}
+          <View style={styles.profileSection}>
+            <Text style={styles.sectionTitle}>Profile Information</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Name</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.textInput}
+                  value={editedName}
+                  onChangeText={setEditedName}
+                  placeholder="Enter your name"
+                  placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                />
+              ) : (
+                <View style={styles.inputDisplay}>
+                  <Text style={styles.inputText}>{user?.name || 'Not set'}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <View style={styles.inputDisplay}>
+                <Text style={styles.inputText}>{user?.email || 'Not set'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Bio</Text>
+              {isEditing ? (
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={editedBio}
+                  onChangeText={setEditedBio}
+                  placeholder="Tell us about yourself..."
+                  placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                  multiline
+                  numberOfLines={4}
+                />
+              ) : (
+                <View style={styles.inputDisplay}>
+                  <Text style={styles.inputText}>{profile?.bio || 'No bio set'}</Text>
+                </View>
+              )}
+            </View>
+
+            {isEditing && (
+              <View style={styles.editActions}>
+                <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Account Actions */}
+          <View style={styles.actionsSection}>
+            <Text style={styles.sectionTitle}>Account</Text>
+
+            <TouchableOpacity style={styles.actionButton} onPress={handleChangePassword}>
+              <View style={styles.actionButtonLeft}>
+                <MaterialIcons name="lock" size={24} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Change Password</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="rgba(255, 255, 255, 0.6)" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton} onPress={handleDeleteAccount}>
+              <View style={styles.actionButtonLeft}>
+                <MaterialIcons name="delete-forever" size={24} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Delete Account</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="rgba(255, 255, 255, 0.6)" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Statistics */}
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Statistics</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{profile?.total_created || 0}</Text>
+                <Text style={styles.statLabel}>PhotoHunts Created</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{profile?.total_completions || 0}</Text>
+                <Text style={styles.statLabel}>PhotoHunts Completed</Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onClose}>
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Profile</Text>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => {
-            if (isEditing) {
-              handleSaveProfile();
-            } else {
-              setIsEditing(true);
-            }
-          }}>
-          <MaterialIcons name={isEditing ? 'check' : 'edit'} size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#FFFFFF"
-            colors={['#FFFFFF']}
-          />
-        }
-        showsVerticalScrollIndicator={false}>
-        {/* Profile Avatar */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            {profile?.avatar ? (
-              <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
-            )}
-          </View>
-          <TouchableOpacity style={styles.changeAvatarButton} onPress={handleChangeAvatar}>
-            <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
-            <Text style={styles.changeAvatarText}>Change Photo</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Profile Information */}
-        <View style={styles.profileSection}>
-          <Text style={styles.sectionTitle}>Profile Information</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Name</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.textInput}
-                value={editedName}
-                onChangeText={setEditedName}
-                placeholder="Enter your name"
-                placeholderTextColor="rgba(255, 255, 255, 0.6)"
-              />
-            ) : (
-              <View style={styles.inputDisplay}>
-                <Text style={styles.inputText}>{user?.name || 'Not set'}</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <View style={styles.inputDisplay}>
-              <Text style={styles.inputText}>{user?.email || 'Not set'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Bio</Text>
-            {isEditing ? (
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                value={editedBio}
-                onChangeText={setEditedBio}
-                placeholder="Tell us about yourself..."
-                placeholderTextColor="rgba(255, 255, 255, 0.6)"
-                multiline
-                numberOfLines={4}
-              />
-            ) : (
-              <View style={styles.inputDisplay}>
-                <Text style={styles.inputText}>{profile?.bio || 'No bio set'}</Text>
-              </View>
-            )}
-          </View>
-
-          {isEditing && (
-            <View style={styles.editActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Account Actions */}
-        <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Account</Text>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleChangePassword}>
-            <View style={styles.actionButtonLeft}>
-              <MaterialIcons name="lock" size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Change Password</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color="rgba(255, 255, 255, 0.6)" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleDeleteAccount}>
-            <View style={styles.actionButtonLeft}>
-              <MaterialIcons name="delete-forever" size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Delete Account</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color="rgba(255, 255, 255, 0.6)" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Statistics */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Statistics</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{profile?.total_created || 0}</Text>
-              <Text style={styles.statLabel}>PhotoHunts Created</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{profile?.total_completions || 0}</Text>
-              <Text style={styles.statLabel}>PhotoHunts Completed</Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
 
       {/* Change Password Modal */}
       <Modal
@@ -364,7 +379,9 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
         transparent
         animationType="slide"
         onRequestClose={() => setShowChangePassword(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Change Password</Text>
@@ -424,9 +441,9 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -434,6 +451,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E14545',
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -458,8 +478,15 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   loadingState: {
     flex: 1,

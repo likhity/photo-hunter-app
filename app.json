@@ -13,7 +13,6 @@
       "typedRoutes": true,
       "tsconfigPaths": true
     },
-    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "statusBar": {
