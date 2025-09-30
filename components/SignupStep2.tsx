@@ -10,9 +10,11 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  TextInput,
 } from 'react-native';
 
 import { GoogleStyleInput } from './GoogleStyleInput';
+import { buildEndpointUrl } from '~/config/api';
 
 interface SignupStep2Props {
   onNext: (email: string) => void;
@@ -33,7 +35,7 @@ export default function SignupStep2({ onNext, onBack, initialEmail = '' }: Signu
     return emailRegex.test(email);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!email.trim()) {
       setError('Please enter your email address');
       return;
@@ -43,6 +45,26 @@ export default function SignupStep2({ onNext, onBack, initialEmail = '' }: Signu
       return;
     }
     setError('');
+    // Validate email availability with backend
+    try {
+      const response = await fetch(buildEndpointUrl('/auth/validate-email/'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData?.email?.length) {
+          setError('An account with this email already exists');
+          return;
+        }
+        throw new Error('Validation failed');
+      }
+    } catch (e) {
+      setError('Unable to validate email. Please try again.');
+      return;
+    }
+
     onNext(email.trim());
   };
 
@@ -63,9 +85,9 @@ export default function SignupStep2({ onNext, onBack, initialEmail = '' }: Signu
             </TouchableOpacity>
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '66%' }]} />
+                <View style={[styles.progressFill, { width: '50%' }]} />
               </View>
-              <Text style={styles.progressText}>Step 2 of 3</Text>
+              <Text style={styles.progressText}>Step 2 of 4</Text>
             </View>
           </View>
 

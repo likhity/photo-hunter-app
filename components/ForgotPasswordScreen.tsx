@@ -14,41 +14,62 @@ import {
 
 import { GoogleStyleInput } from './GoogleStyleInput';
 
-import { useUser } from '~/providers/UserProvider';
+import { buildEndpointUrl } from '~/config/api';
 
-interface NewLoginScreenProps {
+interface ForgotPasswordScreenProps {
   onBack: () => void;
-  onSwitchToSignup: () => void;
-  onForgotPassword: () => void;
+  onNext: (email: string) => void;
 }
 
-export default function NewLoginScreen({
-  onBack,
-  onSwitchToSignup,
-  onForgotPassword,
-}: NewLoginScreenProps) {
+export default function ForgotPasswordScreen({ onBack, onNext }: ForgotPasswordScreenProps) {
   const [fontsLoaded] = useFonts({
     Sen: require('~/assets/fonts/Sen-VariableFont_wght.ttf'),
   });
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useUser();
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields');
+  const handleSendResetCode = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
       return;
     }
 
     try {
       setIsLoading(true);
       setError('');
-      await login({ email: email.trim(), password });
-    } catch {
-      setError('Invalid email or password. Please try again.');
+
+      const response = await fetch(buildEndpointUrl('/auth/forgot-password/'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Forgot password error:', response.status, errorData);
+        throw new Error(`Failed to send reset code: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Reset code sent successfully:', data);
+
+      // Proceed to reset password screen
+      onNext(email.trim());
+    } catch (error) {
+      console.error('Error sending reset code:', error);
+      setError('Failed to send reset code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -69,13 +90,20 @@ export default function NewLoginScreen({
             <TouchableOpacity style={styles.backButton} onPress={onBack}>
               <MaterialIcons name="arrow-back" size={24} color="#374151" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Welcome back!</Text>
+            <Text style={styles.headerTitle}>Reset Password</Text>
           </View>
 
           {/* Content */}
           <View style={styles.mainContent}>
-            <Text style={styles.title}>Log in.</Text>
-            <Text style={styles.subtitle}>Enter your credentials to start hunting!</Text>
+            <View style={styles.iconContainer}>
+              <MaterialIcons name="lock-reset" size={48} color="#E14545" />
+            </View>
+
+            <Text style={styles.title}>Forgot your password?</Text>
+            <Text style={styles.subtitle}>
+              No worries! Enter your email address and we'll send you a verification code to reset
+              your password.
+            </Text>
 
             <View style={styles.inputContainer}>
               <GoogleStyleInput
@@ -86,51 +114,34 @@ export default function NewLoginScreen({
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                returnKeyType="next"
-              />
-
-              <GoogleStyleInput
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                error={error}
-                secureTextEntry={!showPassword}
-                showPasswordToggle
-                onPasswordToggle={() => setShowPassword(!showPassword)}
-                showPassword={showPassword}
                 returnKeyType="done"
-                onSubmitEditing={handleLogin}
+                onSubmitEditing={handleSendResetCode}
               />
             </View>
-
-            <TouchableOpacity style={styles.forgotPassword} onPress={onForgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[
-                styles.loginButton,
-                (!email.trim() || !password.trim() || isLoading) && styles.loginButtonDisabled,
-              ]}
-              onPress={handleLogin}
-              disabled={!email.trim() || !password.trim() || isLoading}>
+              style={[styles.sendButton, (!email.trim() || isLoading) && styles.sendButtonDisabled]}
+              onPress={handleSendResetCode}
+              disabled={!email.trim() || isLoading}>
               <Text
                 style={[
-                  styles.loginButtonText,
-                  (!email.trim() || !password.trim() || isLoading) &&
-                    styles.loginButtonTextDisabled,
+                  styles.sendButtonText,
+                  (!email.trim() || isLoading) && styles.sendButtonTextDisabled,
                 ]}>
-                {isLoading ? 'Signing In...' : 'Sign In'}
+                {isLoading ? 'Sending...' : 'Send Reset Code'}
               </Text>
+              {!isLoading && (
+                <MaterialIcons name="send" size={20} color={email.trim() ? '#FFFFFF' : '#9CA3AF'} />
+              )}
             </TouchableOpacity>
 
             <View style={styles.switchContainer}>
-              <Text style={styles.switchText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={onSwitchToSignup}>
-                <Text style={styles.switchLink}>Sign Up</Text>
+              <Text style={styles.switchText}>Remember your password? </Text>
+              <TouchableOpacity onPress={onBack}>
+                <Text style={styles.switchLink}>Sign In</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -172,12 +183,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 'auto',
+    marginLeft: 'auto',
+    marginBottom: 24,
+  },
   title: {
     fontFamily: 'Sen',
     fontSize: 32,
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: 12,
+    textAlign: 'center',
   },
   subtitle: {
     fontFamily: 'Sen',
@@ -185,41 +208,35 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 48,
     lineHeight: 24,
+    textAlign: 'center',
   },
   inputContainer: {
-    marginBottom: 24,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    fontFamily: 'Sen',
-    fontSize: 14,
-    color: '#E14545',
-    fontWeight: '500',
+    marginBottom: 94,
   },
   footer: {
     paddingBottom: 40,
   },
-  loginButton: {
+  sendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#E14545',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    alignItems: 'center',
     marginBottom: 24,
   },
-  loginButtonDisabled: {
+  sendButtonDisabled: {
     backgroundColor: '#F3F4F6',
   },
-  loginButtonText: {
+  sendButtonText: {
     fontFamily: 'Sen',
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+    marginRight: 8,
   },
-  loginButtonTextDisabled: {
+  sendButtonTextDisabled: {
     color: '#9CA3AF',
   },
   switchContainer: {

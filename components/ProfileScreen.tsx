@@ -16,9 +16,11 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useUser } from '~/providers/UserProvider';
+import { compressAvatarImage } from '~/utils/imageCompression';
 
 interface ProfileScreenProps {
   onClose: () => void;
@@ -36,8 +38,16 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { user, profile, updateProfileWithAvatar, changePassword, deleteAccount, refreshAuth } =
-    useUser();
+  const [isLaunchingPicker, setIsLaunchingPicker] = useState(false);
+  const {
+    user,
+    profile,
+    isBusy,
+    updateProfileWithAvatar,
+    changePassword,
+    deleteAccount,
+    refreshAuth,
+  } = useUser();
 
   // Debug logs
   console.log('ProfileScreen: Component rendered, user:', !!user, 'fontsLoaded:', fontsLoaded);
@@ -83,7 +93,16 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile');
+      const message = String(error?.message || 'Failed to update profile');
+      if (message.toLowerCase().includes('name') && message.toLowerCase().includes('exists')) {
+        Alert.alert('Name Unavailable', 'A user with this name already exists.');
+        return;
+      }
+      if (message.toLowerCase().includes('email') && message.toLowerCase().includes('exists')) {
+        Alert.alert('Email Unavailable', 'A user with this email already exists.');
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -100,9 +119,11 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
 
   const handleChangeAvatar = async () => {
     try {
+      setIsLaunchingPicker(true);
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission needed', 'Please grant permission to access your photos.');
+        setIsLaunchingPicker(false);
         return;
       }
 
@@ -110,17 +131,30 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 1.0, // Use highest quality for initial selection
       });
+
+      // Dismiss the picker loading state as soon as we return from the picker
+      setIsLaunchingPicker(false);
 
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
+
+        // Compress the image for avatar use (1:1 aspect ratio, under 500KB)
+        const compressedImage = await compressAvatarImage(imageUri, {
+          maxSizeKB: 500,
+          quality: 0.8,
+          maxWidth: 512,
+          maxHeight: 512,
+        });
+
+        console.log(`Avatar compressed: ${Math.round(compressedImage.size / 1024)}KB`);
 
         await updateProfileWithAvatar({
           name: editedName.trim(),
           bio: editedBio.trim(),
           avatar_file: {
-            uri: imageUri,
+            uri: compressedImage.uri,
             type: 'image/jpeg',
             name: `avatar_${Date.now()}.jpg`,
           },
@@ -131,6 +165,8 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
     } catch (error: any) {
       console.error('Error updating avatar:', error);
       Alert.alert('Error', error.message || 'Failed to update avatar');
+    } finally {
+      setIsLaunchingPicker(false);
     }
   };
 
@@ -270,7 +306,10 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
                 <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
               )}
             </View>
-            <TouchableOpacity style={styles.changeAvatarButton} onPress={handleChangeAvatar}>
+            <TouchableOpacity
+              style={styles.changeAvatarButton}
+              onPress={handleChangeAvatar}
+              disabled={isLaunchingPicker || isBusy}>
               <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
               <Text style={styles.changeAvatarText}>Change Photo</Text>
             </TouchableOpacity>
@@ -281,7 +320,7 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
             <Text style={styles.sectionTitle}>Profile Information</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Name</Text>
+              <Text style={styles.inputLabel}>Username</Text>
               {isEditing ? (
                 <TextInput
                   style={styles.textInput}
@@ -443,6 +482,15 @@ export default function ProfileScreen({ onClose }: ProfileScreenProps) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Picker/Upload Overlay (non-modal to avoid native modal conflicts) */}
+      {(isLaunchingPicker || isBusy) && (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -722,5 +770,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 24,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  loadingOverlayText: {
+    marginTop: 12,
+    color: '#FFFFFF',
+    fontFamily: 'Sen',
+    fontSize: 14,
   },
 });

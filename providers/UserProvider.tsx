@@ -1,6 +1,6 @@
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 
-import authService, { LoginData, SignupData } from '~/services/authService';
+import authService, { LoginData } from '~/services/authService';
 import {
   User,
   UserProfile,
@@ -13,8 +13,8 @@ interface UserContextType {
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isBusy: boolean;
   login: (data: LoginData) => Promise<void>;
-  signup: (data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   updateProfile: (profileData: Partial<UserProfile>) => Promise<void>;
@@ -28,8 +28,8 @@ const UserContext = createContext<UserContextType>({
   profile: null,
   isAuthenticated: false,
   isLoading: true,
+  isBusy: false,
   login: async () => {},
-  signup: async () => {},
   logout: async () => {},
   refreshAuth: async () => {},
   updateProfile: async () => {},
@@ -43,6 +43,7 @@ export default function UserProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in (e.g., from stored token)
@@ -140,31 +141,6 @@ export default function UserProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const signup = async (data: SignupData) => {
-    try {
-      // ('UserProvider: Starting signup process for:', data.email);
-      setIsLoading(true);
-      const user = await authService.signup(data);
-      // ('UserProvider: Signup successful, user:', user);
-      setUser(user);
-      setIsAuthenticated(true);
-
-      // Fetch user profile after signup
-      try {
-        const userProfile = await authService.getProfile();
-        // ('UserProvider: Profile fetched successfully after signup:', userProfile);
-        setProfile(userProfile);
-      } catch (error) {
-        console.error('Error fetching profile after signup:', error);
-      }
-    } catch (error) {
-      console.error('UserProvider: Signup failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -215,7 +191,7 @@ export default function UserProvider({ children }: PropsWithChildren) {
 
   const updateProfile = async (profileData: Partial<UserProfile>) => {
     try {
-      setIsLoading(true);
+      setIsBusy(true);
       const updatedProfile = await authService.updateProfile(profileData);
       setProfile(updatedProfile);
 
@@ -226,13 +202,13 @@ export default function UserProvider({ children }: PropsWithChildren) {
     } catch (error) {
       throw error;
     } finally {
-      setIsLoading(false);
+      setIsBusy(false);
     }
   };
 
   const updateProfileWithAvatar = async (profileData: ProfileUpdateWithAvatarRequest) => {
     try {
-      setIsLoading(true);
+      setIsBusy(true);
       const updatedProfile = await authService.updateProfileWithAvatar(profileData);
       setProfile(updatedProfile);
 
@@ -243,24 +219,24 @@ export default function UserProvider({ children }: PropsWithChildren) {
     } catch (error) {
       throw error;
     } finally {
-      setIsLoading(false);
+      setIsBusy(false);
     }
   };
 
   const changePassword = async (passwordData: ChangePasswordRequest) => {
     try {
-      setIsLoading(true);
+      setIsBusy(true);
       await authService.changePassword(passwordData);
     } catch (error) {
       throw error;
     } finally {
-      setIsLoading(false);
+      setIsBusy(false);
     }
   };
 
   const deleteAccount = async () => {
     try {
-      setIsLoading(true);
+      setIsBusy(true);
       await authService.deleteAccount();
 
       // Clear all state after successful deletion
@@ -270,7 +246,7 @@ export default function UserProvider({ children }: PropsWithChildren) {
     } catch (error) {
       throw error;
     } finally {
-      setIsLoading(false);
+      setIsBusy(false);
     }
   };
 
@@ -281,8 +257,8 @@ export default function UserProvider({ children }: PropsWithChildren) {
         profile,
         isAuthenticated,
         isLoading,
+        isBusy,
         login,
-        signup,
         logout,
         refreshAuth,
         updateProfile,

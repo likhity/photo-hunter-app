@@ -33,6 +33,7 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
     Sen: require('~/assets/fonts/Sen-VariableFont_wght.ttf'),
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'created' | 'hunted'>('created');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPhotoHunt, setEditingPhotoHunt] = useState<PhotoHunt | null>(null);
   const [editedName, setEditedName] = useState('');
@@ -184,6 +185,11 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
     });
   };
 
+  // Derived lists for tabs
+  const createdHunts = myPhotoHunts.filter((ph) => ph.created_by === user?.id);
+  const huntedHunts = myPhotoHunts.filter((ph) => ph.hunted);
+  const visibleHunts = activeTab === 'created' ? createdHunts : huntedHunts;
+
   if (!fontsLoaded) {
     return (
       <SafeAreaView style={styles.container}>
@@ -214,6 +220,26 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
         <View style={styles.placeholder} />
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'created' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('created')}
+          activeOpacity={0.8}>
+          <Text style={[styles.tabText, activeTab === 'created' && styles.tabTextActive]}>
+            Created
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'hunted' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('hunted')}
+          activeOpacity={0.8}>
+          <Text style={[styles.tabText, activeTab === 'hunted' && styles.tabTextActive]}>
+            Hunted
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Content */}
       <ScrollView
         style={styles.content}
@@ -226,17 +252,23 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
           />
         }
         showsVerticalScrollIndicator={false}>
-        {myPhotoHunts.length === 0 ? (
+        {visibleHunts.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="photo-library" size={64} color="#FFFFFF" />
-            <Text style={styles.emptyTitle}>No PhotoHunts Yet</Text>
-            <Text style={styles.emptySubtitle}>Create your first PhotoHunt to get started!</Text>
+            <Text style={styles.emptyTitle}>
+              {activeTab === 'created' ? 'No Created PhotoHunts' : 'No Hunted PhotoHunts'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {activeTab === 'created'
+                ? 'You have not created any PhotoHunts yet.'
+                : "You haven't hunted any PhotoHunts yet."}
+            </Text>
           </View>
         ) : (
           <View style={styles.photoHuntsList}>
-            {myPhotoHunts &&
-              Array.isArray(myPhotoHunts) &&
-              myPhotoHunts.map((photoHunt) => (
+            {visibleHunts &&
+              Array.isArray(visibleHunts) &&
+              visibleHunts.map((photoHunt) => (
                 <View key={photoHunt.id} style={styles.photoHuntCard}>
                   <View style={styles.photoHuntHeader}>
                     <View style={styles.photoHuntInfo}>
@@ -256,33 +288,53 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
                           {photoHunt.hunted ? 'Hunted' : 'Active'}
                         </Text>
                       </View>
+                      {photoHunt.orientation && (
+                        <View style={styles.orientationContainer}>
+                          <MaterialIcons
+                            name={
+                              photoHunt.orientation === 'landscape'
+                                ? 'stay-current-landscape'
+                                : 'stay-current-portrait'
+                            }
+                            size={16}
+                            color="white"
+                          />
+                          <Text style={styles.orientationText}>
+                            {photoHunt.orientation === 'landscape' ? 'Landscape' : 'Portrait'}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
-                  {photoHunt.reference_image && (
+                  {(photoHunt.submission_image || photoHunt.reference_image) && (
                     <View style={styles.referenceImageContainer}>
                       <Image
-                        source={{ uri: photoHunt.reference_image }}
+                        source={{
+                          uri: (photoHunt.submission_image || photoHunt.reference_image) as string,
+                        }}
                         style={styles.referenceImage}
                         resizeMode="cover"
                       />
                     </View>
                   )}
 
-                  <View style={styles.photoHuntActions}>
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => handleEditPhotoHunt(photoHunt)}>
-                      <MaterialIcons name="edit" size={20} color="#FFFFFF" />
-                      <Text style={styles.actionText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.actionButton, styles.deleteButton]}
-                      onPress={() => handleDeletePhotoHunt(photoHunt)}>
-                      <MaterialIcons name="delete" size={20} color="#FFFFFF" />
-                      <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {photoHunt.created_by === user?.id && (
+                    <View style={styles.photoHuntActions}>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleEditPhotoHunt(photoHunt)}>
+                        <MaterialIcons name="edit" size={20} color="#FFFFFF" />
+                        <Text style={styles.actionText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.deleteButton]}
+                        onPress={() => handleDeletePhotoHunt(photoHunt)}>
+                        <MaterialIcons name="delete" size={20} color="#FFFFFF" />
+                        <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
           </View>
@@ -391,24 +443,24 @@ export default function MyPhotoHuntsScreen({ onClose }: MyPhotoHuntsScreenProps)
                   </View>
                 </View>
               )}
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setShowEditModal(false)}
-                  disabled={isUpdating}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.saveButton, isUpdating && styles.saveButtonDisabled]}
-                  onPress={handleSaveEdit}
-                  disabled={isUpdating}>
-                  <Text style={styles.saveButtonText}>
-                    {isUpdating ? 'Updating...' : 'Save Changes'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowEditModal(false)}
+                disabled={isUpdating}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveButton, isUpdating && styles.saveButtonDisabled]}
+                onPress={handleSaveEdit}
+                disabled={isUpdating}>
+                <Text style={styles.saveButtonText}>
+                  {isUpdating ? 'Updating...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -436,6 +488,32 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontSize: 20,
     fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 24,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  tabText: {
+    fontFamily: 'Sen',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '600',
+  },
+  tabTextActive: {
     color: '#FFFFFF',
   },
   placeholder: {
@@ -525,6 +603,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  orientationContainer: {
+    marginTop: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  orientationText: {
+    fontFamily: 'Sen',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
   referenceImageContainer: {
     marginBottom: 16,
     borderRadius: 12,
@@ -601,8 +690,8 @@ const styles = StyleSheet.create({
     maxHeight: 400,
   },
   modalScrollContent: {
-    flexGrow: 1,
     paddingBottom: 20,
+    paddingTop: 15,
   },
   inputGroup: {
     marginBottom: 20,
@@ -689,6 +778,14 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#E14545',
+    borderRadius: 20,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
   },
   cancelButton: {
     flex: 1,

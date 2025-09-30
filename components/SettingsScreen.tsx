@@ -90,7 +90,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                 <View style={styles.styleCardHeader}>
                   <Text style={styles.styleCardTitle}>{style.name}</Text>
                   {selectedStyle.id === style.id && (
-                    <MaterialIcons name="check-circle" size={20} color="#E14545" />
+                    <MaterialIcons name="check-circle" size={20} color="#FFFFFF" />
                   )}
                 </View>
                 <Text style={styles.styleCardDescription}>{style.description}</Text>

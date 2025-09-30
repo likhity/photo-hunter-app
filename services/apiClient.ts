@@ -62,6 +62,23 @@ class ApiClient {
     }
   }
 
+  // Reload tokens from SecureStore (useful when tokens are updated externally)
+  async reloadTokens(): Promise<void> {
+    try {
+      console.log('ApiClient: Reloading tokens from SecureStore...');
+      this.accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+      this.refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      console.log(
+        'ApiClient: Tokens reloaded - accessToken:',
+        !!this.accessToken,
+        'refreshToken:',
+        !!this.refreshToken
+      );
+    } catch (error) {
+      console.error('ApiClient: Error reloading tokens:', error);
+    }
+  }
+
   // Store tokens securely
   private async storeTokens(tokens: AuthTokens) {
     try {
@@ -403,35 +420,6 @@ class ApiClient {
 
     if (response.data) {
       // ('ApiClient: Storing tokens');
-      await this.storeTokens({
-        access: response.data.access,
-        refresh: response.data.refresh,
-      });
-    }
-
-    return response;
-  }
-
-  async register(userData: {
-    email: string;
-    password: string;
-    password_confirm: string;
-    name: string;
-  }): Promise<ApiResponse<{ user: any; access: string; refresh: string }>> {
-    // // (
-    //   'ApiClient: Making register request to:',
-    //   `${this.baseURL}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`
-    // );
-    // // ('ApiClient: Register data:', userData);
-    // // ('ApiClient: Full request body:', JSON.stringify(userData, null, 2));
-    const response = await this.post<{ user: any; access: string; refresh: string }>(
-      API_CONFIG.ENDPOINTS.AUTH.REGISTER,
-      userData
-    );
-    // // ('ApiClient: Register response:', response);
-
-    if (response.data) {
-      //   // ('ApiClient: Storing tokens for new user');
       await this.storeTokens({
         access: response.data.access,
         refresh: response.data.refresh,

@@ -10,6 +10,7 @@ import {
   PhotoSubmissionResponse,
   NearbyPhotoHuntsRequest,
 } from '~/types/api';
+import { compressPhotoSubmissionImage } from '~/utils/imageCompression';
 
 export interface CreatePhotoHuntData {
   name: string;
@@ -25,6 +26,7 @@ export interface CreatePhotoHuntData {
       };
   difficulty?: number; // Float from 0-5
   hint?: string; // Optional hint text
+  orientation?: 'portrait' | 'landscape';
 }
 
 class PhotoHuntService {
@@ -109,6 +111,7 @@ class PhotoHuntService {
             long: data.long,
             difficulty: data.difficulty,
             hint: data.hint,
+            orientation: data.orientation,
           }
         );
 
@@ -126,6 +129,7 @@ class PhotoHuntService {
           reference_image: data.referenceImage as string,
           difficulty: data.difficulty,
           hint: data.hint,
+          orientation: data.orientation,
         };
 
         // Log the request data being sent
@@ -287,8 +291,18 @@ class PhotoHuntService {
   // Submit photo for validation using multipart form data
   async submitPhoto(photohuntId: string, imageUri: string): Promise<PhotoSubmissionResponse> {
     try {
+      // Compress the image for photo submission (preserve aspect ratio, under 500KB)
+      const compressedImage = await compressPhotoSubmissionImage(imageUri, {
+        maxSizeKB: 500,
+        quality: 0.8,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      });
+
+      console.log(`Photo submission compressed: ${Math.round(compressedImage.size / 1024)}KB`);
+
       const photoFile = {
-        uri: imageUri,
+        uri: compressedImage.uri,
         type: 'image/jpeg',
         name: `photo_${Date.now()}.jpg`,
       };
@@ -327,8 +341,18 @@ class PhotoHuntService {
   // Upload image to S3 (if you have an upload endpoint)
   async uploadImage(imageUri: string, type: string = 'image/jpeg'): Promise<string> {
     try {
+      // Compress the image before upload (preserve aspect ratio, under 500KB)
+      const compressedImage = await compressPhotoSubmissionImage(imageUri, {
+        maxSizeKB: 500,
+        quality: 0.8,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      });
+
+      console.log(`Image upload compressed: ${Math.round(compressedImage.size / 1024)}KB`);
+
       const response = await apiClient.uploadFile<{ url: string }>('/upload/', {
-        uri: imageUri,
+        uri: compressedImage.uri,
         type,
         name: `photo_${Date.now()}.jpg`,
       });

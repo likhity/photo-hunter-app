@@ -134,6 +134,10 @@ export default function Home() {
     setShowCamera(false);
   };
 
+  const handlePhotoOrientation = (orientation: 'portrait' | 'landscape') => {
+    createPhotoHuntSheetRef.current?.setReferenceOrientation?.(orientation);
+  };
+
   const handleCloseCamera = () => {
     setShowCamera(false);
   };
@@ -224,6 +228,7 @@ export default function Home() {
             onPhotoTaken={handlePhotoTaken}
             onClose={handleCloseCamera}
             photoHuntName={photoHuntName || 'Reference Photo'}
+            onPhotoOrientation={handlePhotoOrientation}
           />
         </View>
       )}

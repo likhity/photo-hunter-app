@@ -1,15 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { useEffect, useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   Image,
-  Dimensions,
   Animated,
-  Easing,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 import { usePhotoHunt } from '~/providers/PhotoHuntProvider';
@@ -23,8 +23,6 @@ interface PhotoValidationScreenProps {
   onRetry: () => void;
 }
 
-const { height } = Dimensions.get('window');
-
 export default function PhotoValidationScreen({
   photoUri,
   photoHuntId,
@@ -35,53 +33,75 @@ export default function PhotoValidationScreen({
   const [validationStatus, setValidationStatus] = useState<'validating' | 'success' | 'failed'>(
     'validating'
   );
-  const [progress, setProgress] = useState(0);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [validationResult, setValidationResult] = useState<PhotoSubmissionResponse | null>(null);
-  const spinValue = new Animated.Value(0);
-  const scaleValue = new Animated.Value(1);
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const textOpacity = useRef(new Animated.Value(1)).current;
+
+  const validationMessages = [
+    'Analyzing Image',
+    'Checking Details',
+    'Verifying Integrity',
+    'Processing Data',
+    'Running the Model',
+    'Comparing Features',
+    'Validating Patterns',
+    'Computing Similarity',
+    'Finalizing Results',
+    'Almost Done...',
+  ];
 
   const { submitPhoto } = usePhotoHunt();
 
   useEffect(() => {
+    // Lock to portrait orientation
+    const lockOrientation = async () => {
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    };
+
+    lockOrientation();
+
     // Start validation process
     startValidation();
+
+    // Cleanup: unlock orientation when component unmounts
+    return () => {
+      ScreenOrientation.unlockAsync();
+    };
   }, []);
 
   const startValidation = async () => {
     try {
-      // Start spinning animation
-      Animated.loop(
-        Animated.timing(spinValue, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.linear,
+      // Reset text opacity to 1 when starting validation
+      textOpacity.setValue(1);
+
+      // Cycle through validation messages with fade animation
+      const messageInterval = setInterval(() => {
+        // Fade out current text
+        Animated.timing(textOpacity, {
+          toValue: 0,
+          duration: 200,
           useNativeDriver: true,
-        })
-      ).start();
-
-      // Simulate progress updates
-      const duration = 3000; // 3 seconds for real API call
-      const interval = 100; // Update every 100ms
-      const totalSteps = duration / interval;
-      let currentStep = 0;
-
-      const progressInterval = setInterval(() => {
-        currentStep++;
-        const newProgress = (currentStep / totalSteps) * 100;
-        setProgress(newProgress);
-
-        if (currentStep >= totalSteps) {
-          clearInterval(progressInterval);
-        }
-      }, interval);
+        }).start(() => {
+          // Change text and fade in
+          setCurrentMessageIndex((prevIndex) => (prevIndex + 1) % validationMessages.length);
+          Animated.timing(textOpacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }).start();
+        });
+      }, 1500); // Change message every 1500ms
 
       // Submit photo for validation
       const result = await submitPhoto(photoHuntId, photoUri);
       setValidationResult(result);
 
-      // Clear progress interval
-      clearInterval(progressInterval);
-      setProgress(100);
+      // Clear message interval
+      clearInterval(messageInterval);
+
+      // Reset text opacity to 1 for final state
+      textOpacity.setValue(1);
 
       // Determine validation status based on result
       if (result.validation.is_valid) {
@@ -112,7 +132,7 @@ export default function PhotoValidationScreen({
   const getStatusTitle = () => {
     switch (validationStatus) {
       case 'validating':
-        return 'Validating Photo...';
+        return validationMessages[currentMessageIndex];
       case 'success':
         return 'Great Hunt.';
       case 'failed':
@@ -125,7 +145,7 @@ export default function PhotoValidationScreen({
   const getStatusMessage = () => {
     switch (validationStatus) {
       case 'validating':
-        return 'Our AI is analyzing your photo to see if it matches the reference image.';
+        return 'Our AI is validating your photo with the reference image. Please wait...';
       case 'success':
         return `You've successfully hunted\n"${photoHuntName}".`;
       case 'failed':
@@ -151,6 +171,11 @@ export default function PhotoValidationScreen({
         {/* Photo Preview */}
         <View style={styles.photoContainer}>
           <Image source={{ uri: photoUri }} style={styles.photo} />
+          {validationStatus === 'validating' && (
+            <View style={styles.photoOverlay}>
+              <ActivityIndicator size="large" color="#FFFFFF" style={styles.spinner} />
+            </View>
+          )}
           {validationStatus !== 'validating' && (
             <View style={styles.photoOverlay}>
               <Animated.View
@@ -187,22 +212,22 @@ export default function PhotoValidationScreen({
             </Animated.View>
           )}
 
-          <Text style={styles.statusTitle}>{getStatusTitle()}</Text>
+          <Animated.Text style={[styles.statusTitle, { opacity: textOpacity }]}>
+            {getStatusTitle()}
+          </Animated.Text>
+
+          {/* Additional ActivityIndicator below text during validation */}
+          {validationStatus === 'validating' && (
+            <View style={styles.bottomSpinnerContainer}>
+              <ActivityIndicator size="large" color="#E14545" />
+            </View>
+          )}
+
           <Text style={styles.statusMessage}>{getStatusMessage()}</Text>
 
           {/* Validation Details */}
           {validationResult && validationStatus !== 'validating' && (
             <Text style={styles.validationDetails}>{getValidationDetails()}</Text>
-          )}
-
-          {/* Progress Bar */}
-          {validationStatus === 'validating' && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progress}%` }]} />
-              </View>
-              <Text style={styles.progressText}>{Math.round(progress)}%</Text>
-            </View>
           )}
 
           {/* Action Buttons */}
@@ -243,10 +268,12 @@ const styles = StyleSheet.create({
   photoContainer: {
     position: 'relative',
     marginBottom: 30,
+    aspectRatio: 1,
+    width: '100%',
   },
   photo: {
     width: '100%',
-    height: height * 0.4,
+    height: '100%',
     borderRadius: 15,
     resizeMode: 'cover',
   },
@@ -260,6 +287,23 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  spinnerOverlay: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 40,
+  },
+  spinner: {
+    width: 60,
+    height: 60,
+  },
+  bottomSpinnerContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    marginBottom: 30,
   },
   statusIconOverlay: {
     width: 80,
@@ -293,28 +337,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 30,
-  },
-  progressContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  progressBar: {
-    width: '100%',
-    height: 6,
-    backgroundColor: '#333',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 10,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#E14545',
-    borderRadius: 3,
-  },
-  progressText: {
-    color: '#ccc',
-    fontSize: 14,
-    fontFamily: 'Sen',
   },
   validationDetails: {
     color: '#999',

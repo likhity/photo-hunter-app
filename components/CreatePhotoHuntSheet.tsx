@@ -11,9 +11,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 
+import photoHuntIcon from '~/assets/adaptive-icon.png';
 import cameraIcon from '~/assets/camera-icon.png';
+import { compressPhotoHuntImage } from '~/utils/imageCompression';
 
 interface CreatePhotoHuntSheetProps {
   onSubmit: (photoHunt: {
@@ -24,6 +28,7 @@ interface CreatePhotoHuntSheetProps {
     referenceImage: string | { uri: string; type: string; name: string };
     difficulty?: number;
     hint?: string;
+    orientation?: 'portrait' | 'landscape';
   }) => void;
   onSheetChange?: (isOpen: boolean) => void;
   onCameraOpen?: () => void;
@@ -33,8 +38,9 @@ interface CreatePhotoHuntSheetProps {
 export interface CreatePhotoHuntSheetRef {
   open: () => void;
   close: () => void;
-  setReferenceImage: (uri: string) => void;
+  setReferenceImage: (uri: string) => Promise<void>;
   getPhotoHuntName: () => string;
+  setReferenceOrientation: (orientation: 'portrait' | 'landscape') => void;
 }
 
 const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHuntSheetProps>(
@@ -45,10 +51,43 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
       string | { uri: string; type: string; name: string } | null
     >(null);
     const [location, setLocation] = useState<{ lat: number; long: number } | null>(null);
-    const [difficulty, setDifficulty] = useState<number>(2.5);
+    const [difficulty, setDifficulty] = useState<number>(3.0);
     const [hint, setHint] = useState('');
+    const [referenceOrientation, setReferenceOrientation] = useState<'portrait' | 'landscape'>(
+      'portrait'
+    );
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isProcessingImage, setIsProcessingImage] = useState(false);
     const bottomSheetRef = useRef<BottomSheet>(null);
+    const lastIndexRef = useRef<number>(-1);
+    const iconTranslateY = useRef(new Animated.Value(-30)).current;
+    const iconScale = useRef(new Animated.Value(0.8)).current;
+    const iconOpacity = useRef(new Animated.Value(0)).current;
+
+    const animateHeaderIcon = () => {
+      iconTranslateY.setValue(-30);
+      iconScale.setValue(0.8);
+      iconOpacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(iconOpacity, {
+          toValue: 1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.spring(iconTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 6,
+          tension: 80,
+        }),
+        Animated.spring(iconScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 6,
+          tension: 80,
+        }),
+      ]).start();
+    };
 
     useImperativeHandle(ref, () => ({
       open: () => {
@@ -63,17 +102,39 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
         bottomSheetRef.current?.close();
         onSheetChange?.(false);
       },
-      setReferenceImage: (uri: string) => {
-        // Create a file object with proper metadata for multipart upload
-        const fileObject = {
-          uri,
-          type: 'image/jpeg', // Default to JPEG, could be enhanced to detect actual type
-          name: `photohunt_${Date.now()}.jpg`, // Generate unique filename
-        };
-        setReferenceImage(fileObject);
+      setReferenceImage: async (uri: string) => {
+        try {
+          setIsProcessingImage(true);
+
+          // Compress the image for photo hunt use (preserve aspect ratio, under 500KB)
+          const compressedImage = await compressPhotoHuntImage(uri, {
+            maxSizeKB: 500,
+            quality: 0.8,
+            maxWidth: 1920,
+            maxHeight: 1920,
+          });
+
+          console.log(`Photo hunt image compressed: ${Math.round(compressedImage.size / 1024)}KB`);
+
+          // Create a file object with proper metadata for multipart upload
+          const fileObject = {
+            uri: compressedImage.uri,
+            type: 'image/jpeg',
+            name: `photohunt_${Date.now()}.jpg`,
+          };
+          setReferenceImage(fileObject);
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          Alert.alert('Error', 'Failed to process image. Please try again.');
+        } finally {
+          setIsProcessingImage(false);
+        }
       },
       getPhotoHuntName: () => {
         return name;
+      },
+      setReferenceOrientation: (orientation: 'portrait' | 'landscape') => {
+        setReferenceOrientation(orientation);
       },
     }));
 
@@ -104,7 +165,7 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
       setDescription('');
       setReferenceImage(null);
       setLocation(null);
-      setDifficulty(2.5);
+      setDifficulty(3.0);
       setHint('');
     };
 
@@ -142,6 +203,7 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
           referenceImage,
           difficulty,
           hint: hint.trim() || undefined,
+          orientation: referenceOrientation,
         });
 
         // Reset form only after successful submission
@@ -155,182 +217,205 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
     };
 
     return (
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={['85%']}
-        enablePanDownToClose
-        backgroundStyle={styles.bottomSheetBackground}
-        handleIndicatorStyle={styles.handleIndicator}
-        style={styles.bottomSheet}
-        onChange={(index) => {
-          if (index === -1) {
-            Keyboard.dismiss();
-            onSheetChange?.(false);
-          } else if (index >= 0) {
-            onSheetChange?.(true);
-          }
-        }}>
-        <BottomSheetScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator>
-          {/* Header */}
-          <View style={styles.header}>
-            <Ionicons name="camera" size={48} color="white" style={styles.headerIcon} />
-            <Text style={styles.title}>Create PhotoHunt</Text>
-          </View>
-
-          {/* Name Input */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="pricetag-outline" size={20} color="white" />
-              <Text style={styles.label}>
-                PhotoHunt Name <Text style={styles.asterisk}>*</Text>
-              </Text>
+      <>
+        <BottomSheet
+          ref={bottomSheetRef}
+          index={-1}
+          snapPoints={['85%']}
+          enablePanDownToClose
+          backgroundStyle={styles.bottomSheetBackground}
+          handleIndicatorStyle={styles.handleIndicator}
+          style={styles.bottomSheet}
+          onChange={(index) => {
+            const prevIndex = lastIndexRef.current;
+            if (index === -1) {
+              Keyboard.dismiss();
+              onSheetChange?.(false);
+              // Reset when closing
+              iconTranslateY.setValue(-30);
+              iconScale.setValue(0.8);
+              iconOpacity.setValue(0);
+            } else if (index >= 0) {
+              onSheetChange?.(true);
+              // Only animate on open transition (-1 -> >=0)
+              if (prevIndex === -1) {
+                animateHeaderIcon();
+              }
+            }
+            lastIndexRef.current = index;
+          }}>
+          <BottomSheetScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator>
+            {/* Header */}
+            <View style={styles.header}>
+              <Animated.View
+                style={{
+                  opacity: iconOpacity,
+                  transform: [{ translateY: iconTranslateY }, { scale: iconScale }],
+                }}>
+                <Image source={photoHuntIcon} style={styles.headerIcon} />
+              </Animated.View>
+              <Text style={styles.title}>Create PhotoHunt</Text>
             </View>
-            <TextInput
-              style={styles.textInput}
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g., Beautiful View of the Beach"
-              placeholderTextColor="rgba(255, 255, 255, 0.6)"
-            />
-          </View>
 
-          {/* Description Input */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="document-text-outline" size={20} color="white" />
-              <Text style={styles.label}>
-                Description <Text style={styles.asterisk}>*</Text>
-              </Text>
-            </View>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Describe what hunters should look for and photograph..."
-              placeholderTextColor="rgba(255, 255, 255, 0.6)"
-              multiline
-              numberOfLines={4}
-            />
-          </View>
-
-          {/* Difficulty Selector */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="bar-chart-outline" size={20} color="white" />
-              <Text style={styles.label}>Difficulty</Text>
-            </View>
-            <View style={styles.difficultyContainer}>
-              <Text style={styles.difficultyValue}>{difficulty.toFixed(1)} / 5.0</Text>
-              <View style={styles.difficultyButtons}>
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <TouchableOpacity
-                    key={level}
-                    style={[
-                      styles.difficultyButton,
-                      difficulty >= level && styles.difficultyButtonActive,
-                    ]}
-                    onPress={() => setDifficulty(level)}>
-                    <Ionicons
-                      name="star"
-                      size={20}
-                      color={difficulty >= level ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)'}
-                    />
-                  </TouchableOpacity>
-                ))}
+            {/* Name Input */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="pricetag-outline" size={20} color="white" />
+                <Text style={styles.label}>
+                  PhotoHunt Name <Text style={styles.asterisk}>*</Text>
+                </Text>
               </View>
-              <View style={styles.difficultyLabels}>
-                <Text style={styles.difficultyLabel}>Easy</Text>
-                <Text style={styles.difficultyLabel}>Hard</Text>
+              <TextInput
+                style={styles.textInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g., Beautiful View of the Beach"
+                placeholderTextColor="rgba(255, 255, 255, 0.6)"
+              />
+            </View>
+
+            {/* Description Input */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="document-text-outline" size={20} color="white" />
+                <Text style={styles.label}>
+                  Description <Text style={styles.asterisk}>*</Text>
+                </Text>
               </View>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Describe what hunters should look for and photograph..."
+                placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                multiline
+                numberOfLines={4}
+              />
             </View>
-          </View>
 
-          {/* Hint Input */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="bulb-outline" size={20} color="white" />
-              <Text style={styles.label}>Hint (Optional)</Text>
-            </View>
-            <TextInput
-              style={styles.textInput}
-              value={hint}
-              onChangeText={setHint}
-              placeholder="Give hunters a helpful clue..."
-              placeholderTextColor="rgba(255, 255, 255, 0.6)"
-            />
-          </View>
-
-          {/* Reference Image */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="camera-outline" size={20} color="white" />
-              <Text style={styles.label}>
-                Reference Photo <Text style={styles.asterisk}>*</Text>
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.imagePicker} onPress={takePhoto}>
-              {referenceImage ? (
-                <Image
-                  source={{
-                    uri: typeof referenceImage === 'string' ? referenceImage : referenceImage.uri,
-                  }}
-                  style={styles.selectedImage}
-                />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Image source={cameraIcon} style={styles.cameraIconPlaceholder} />
-                  <Text style={styles.imagePlaceholderText}>Take Reference Photo</Text>
+            {/* Difficulty Selector */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="bar-chart-outline" size={20} color="white" />
+                <Text style={styles.label}>Difficulty</Text>
+              </View>
+              <View style={styles.difficultyContainer}>
+                <Text style={styles.difficultyValue}>{difficulty.toFixed(1)} / 5.0</Text>
+                <View style={styles.difficultyButtons}>
+                  <Text style={styles.difficultyLabelEasy}>Easy</Text>
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <TouchableOpacity
+                      key={level}
+                      style={[
+                        styles.difficultyButton,
+                        difficulty >= level && styles.difficultyButtonActive,
+                      ]}
+                      onPress={() => setDifficulty(level)}>
+                      <Ionicons
+                        name="star"
+                        size={20}
+                        color={difficulty >= level ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  <Text style={styles.difficultyLabelHard}>Hard</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Location */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="location-outline" size={20} color="white" />
-              <Text style={styles.label}>
-                Location <Text style={styles.asterisk}>*</Text>
-              </Text>
+              </View>
             </View>
-            <TouchableOpacity style={styles.locationButton} onPress={getCurrentLocation}>
-              <Text style={styles.locationButtonText}>
-                {location ? 'Location Set ✓' : 'Use Current Location'}
-              </Text>
-            </TouchableOpacity>
-            {location && (
-              <Text style={styles.locationText}>
-                Lat: {location.lat.toFixed(6)}, Long: {location.long.toFixed(6)}
-              </Text>
-            )}
-          </View>
 
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={resetForm}
-              disabled={isSubmitting}>
-              <Text style={styles.clearButtonText} numberOfLines={1}>
-                Clear Form
-              </Text>
-            </TouchableOpacity>
+            {/* Hint Input */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="bulb-outline" size={20} color="white" />
+                <Text style={styles.label}>Hint (Optional)</Text>
+              </View>
+              <TextInput
+                style={styles.textInput}
+                value={hint}
+                onChangeText={setHint}
+                placeholder="Give hunters a helpful clue..."
+                placeholderTextColor="rgba(255, 255, 255, 0.6)"
+              />
+            </View>
 
-            <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}>
-              <Text style={styles.submitText} numberOfLines={1}>
-                {isSubmitting ? 'Creating...' : 'Create'}
-              </Text>
-            </TouchableOpacity>
+            {/* Reference Image */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="camera-outline" size={20} color="white" />
+                <Text style={styles.label}>
+                  Reference Photo <Text style={styles.asterisk}>*</Text>
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.imagePicker} onPress={takePhoto}>
+                {referenceImage ? (
+                  <Image
+                    source={{
+                      uri: typeof referenceImage === 'string' ? referenceImage : referenceImage.uri,
+                    }}
+                    style={styles.selectedImage}
+                  />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Image source={cameraIcon} style={styles.cameraIconPlaceholder} />
+                    <Text style={styles.imagePlaceholderText}>Take Reference Photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Location */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="location-outline" size={20} color="white" />
+                <Text style={styles.label}>
+                  Location <Text style={styles.asterisk}>*</Text>
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.locationButton} onPress={getCurrentLocation}>
+                <Text style={styles.locationButtonText}>
+                  {location ? 'Location Set ✓' : 'Use Current Location'}
+                </Text>
+              </TouchableOpacity>
+              {location && (
+                <Text style={styles.locationText}>
+                  Lat: {location.lat.toFixed(6)}, Long: {location.long.toFixed(6)}
+                </Text>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={resetForm}
+                disabled={isSubmitting}>
+                <Text style={styles.clearButtonText} numberOfLines={1}>
+                  Clear Form
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={isSubmitting}>
+                <Text style={styles.submitText} numberOfLines={1}>
+                  {isSubmitting ? 'Creating...' : 'Create'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </BottomSheetScrollView>
+        </BottomSheet>
+        {isProcessingImage && (
+          <View style={styles.loadingOverlay} pointerEvents="auto">
+            <View style={styles.loadingCard}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+            </View>
           </View>
-        </BottomSheetScrollView>
-      </BottomSheet>
+        )}
+      </>
     );
   }
 );
@@ -338,6 +423,25 @@ const CreatePhotoHuntSheet = forwardRef<CreatePhotoHuntSheetRef, CreatePhotoHunt
 CreatePhotoHuntSheet.displayName = 'CreatePhotoHuntSheet';
 
 const styles = StyleSheet.create({
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  loadingCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
   bottomSheet: {
     zIndex: 12,
   },
@@ -352,6 +456,8 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    padding: 5,
+    paddingTop: 0,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -359,12 +465,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginTop: 5,
-    marginBottom: 30,
+    marginBottom: 20,
     alignItems: 'center',
   },
   headerIcon: {
-    marginBottom: 12,
+    width: 100,
+    height: 100,
   },
   title: {
     fontSize: 24,
@@ -374,6 +480,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputGroup: {
+    marginTop: 12,
     marginBottom: 24,
   },
   labelContainer: {
@@ -487,6 +594,8 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
+    paddingTop: 20,
+    paddingBottom: 25,
   },
   clearButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -557,10 +666,17 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
   },
-  difficultyLabel: {
+  difficultyLabelEasy: {
     fontFamily: 'Sen',
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
+    marginRight: 10,
+  },
+  difficultyLabelHard: {
+    fontFamily: 'Sen',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 10,
   },
 });
 

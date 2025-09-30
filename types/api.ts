@@ -32,8 +32,12 @@ export interface PhotoHunt {
   latitude: number;
   longitude: number;
   reference_image: string | null;
+  // For hunts not created by the user, if the user hunted it, backend may
+  // include the user's submitted image. This can be null or absent.
+  submission_image?: string | null;
   difficulty?: number; // Float from 0-5
   hint?: string; // Optional hint text
+  orientation?: 'portrait' | 'landscape';
   created_by: string;
   created_by_name: string;
   created_by_avatar?: string; // Optional avatar URL for the creator
@@ -76,12 +80,6 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
-}
-
 export interface AuthResponse {
   user: User;
   access: string;
@@ -96,6 +94,7 @@ export interface PhotoHuntCreateRequest {
   reference_image?: string;
   difficulty?: number; // Float from 0-5
   hint?: string; // Optional hint text
+  orientation?: 'portrait' | 'landscape';
 }
 
 export interface PhotoHuntCreateFormData {
@@ -110,6 +109,7 @@ export interface PhotoHuntCreateFormData {
   };
   difficulty?: number; // Float from 0-5
   hint?: string; // Optional hint text
+  orientation?: 'portrait' | 'landscape';
 }
 
 export interface PhotoSubmissionRequest {

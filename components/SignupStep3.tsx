@@ -14,17 +14,18 @@ import {
 } from 'react-native';
 
 import { GoogleStyleInput } from './GoogleStyleInput';
+import { buildEndpointUrl } from '~/config/api';
 
 import { useUser } from '~/providers/UserProvider';
 
 interface SignupStep3Props {
   onBack: () => void;
-  onComplete: () => void;
+  onNext: (password: string, passwordConfirm: string) => void;
   name: string;
   email: string;
 }
 
-export default function SignupStep3({ onBack, onComplete, name, email }: SignupStep3Props) {
+export default function SignupStep3({ onBack, onNext, name, email }: SignupStep3Props) {
   const [fontsLoaded] = useFonts({
     Sen: require('~/assets/fonts/Sen-VariableFont_wght.ttf'),
   });
@@ -34,7 +35,7 @@ export default function SignupStep3({ onBack, onComplete, name, email }: SignupS
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useUser();
+  const {} = useUser();
 
   const handleComplete = async () => {
     if (!password.trim()) {
@@ -53,17 +54,61 @@ export default function SignupStep3({ onBack, onComplete, name, email }: SignupS
     try {
       setIsLoading(true);
       setError('');
-      await signup({
-        name,
-        email,
-        password,
-        passwordConfirm: confirmPassword,
-      });
-      onComplete();
+
+      // Initiate OTP via backend (Twilio Verify)
+      const ok = await initiateOtp();
+      if (!ok) {
+        // Error message already set in initiateOtp
+        return;
+      }
+
+      // Proceed to OTP verification step
+      onNext(password, confirmPassword);
     } catch (error) {
-      setError('Failed to create account. Please try again.');
+      setError('Failed to initiate verification. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const initiateOtp = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(buildEndpointUrl('/auth/initiate-otp/'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          name,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', response.status, errorData);
+        // Handle field-level errors from backend
+        if (errorData?.email?.length) {
+          setError('An account with this email already exists');
+          return false;
+        }
+        if (errorData?.name?.length) {
+          setError('This name is already taken');
+          return false;
+        }
+        throw new Error(`Failed to initiate OTP verification: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('OTP initiation status:', data);
+      return true;
+    } catch (error) {
+      console.error('Error initiating OTP:', error);
+      // Surface a generic error if we didn't already set a specific one
+      if (!error) {
+        setError('Failed to initiate verification. Please try again.');
+      }
+      return false;
     }
   };
 
@@ -84,9 +129,9 @@ export default function SignupStep3({ onBack, onComplete, name, email }: SignupS
             </TouchableOpacity>
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '100%' }]} />
+                <View style={[styles.progressFill, { width: '75%' }]} />
               </View>
-              <Text style={styles.progressText}>Step 3 of 3</Text>
+              <Text style={styles.progressText}>Step 3 of 4</Text>
             </View>
           </View>
 

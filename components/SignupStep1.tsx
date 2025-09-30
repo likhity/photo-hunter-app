@@ -10,9 +10,11 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  TextInput,
 } from 'react-native';
 
 import { GoogleStyleInput } from './GoogleStyleInput';
+import { buildEndpointUrl } from '~/config/api';
 
 interface SignupStep1Props {
   onNext: (name: string) => void;
@@ -28,7 +30,7 @@ export default function SignupStep1({ onNext, onBack, initialName = '' }: Signup
   const [error, setError] = useState('');
   const inputRef = useRef<TextInput>(null);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!name.trim()) {
       setError('Please enter your full name');
       return;
@@ -38,6 +40,26 @@ export default function SignupStep1({ onNext, onBack, initialName = '' }: Signup
       return;
     }
     setError('');
+    // Validate name availability with backend
+    try {
+      const response = await fetch(buildEndpointUrl('/auth/validate-name/'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData?.name?.length) {
+          setError('This name is already taken');
+          return;
+        }
+        throw new Error('Validation failed');
+      }
+    } catch (e) {
+      setError('Unable to validate name. Please try again.');
+      return;
+    }
+
     onNext(name.trim());
   };
 
@@ -58,17 +80,17 @@ export default function SignupStep1({ onNext, onBack, initialName = '' }: Signup
             </TouchableOpacity>
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '33%' }]} />
+                <View style={[styles.progressFill, { width: '25%' }]} />
               </View>
-              <Text style={styles.progressText}>Step 1 of 3</Text>
+              <Text style={styles.progressText}>Step 1 of 4</Text>
             </View>
           </View>
 
           {/* Content */}
           <View style={styles.mainContent}>
-            <Text style={styles.title}>What's your name?</Text>
+            <Text style={styles.title}>What will be your username?</Text>
             <Text style={styles.subtitle}>
-              Select a username to be displayed on your profile and PhotoHunts.
+              Select a username to be displayed on your profile and PhotoHunts
             </Text>
 
             <View style={styles.inputContainer}>

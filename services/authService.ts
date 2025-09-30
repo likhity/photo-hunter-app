@@ -18,13 +18,6 @@ export interface LoginData {
   password: string;
 }
 
-export interface SignupData {
-  email: string;
-  password: string;
-  passwordConfirm: string;
-  name: string;
-}
-
 class AuthService {
   private currentUser: User | null = null;
   private isAuthenticated = false;
@@ -91,34 +84,6 @@ class AuthService {
     }
   }
 
-  async signup(data: SignupData): Promise<User> {
-    try {
-      //   // ('AuthService: Attempting signup for:', data.email);
-      //   // ('AuthService: Signup data received:', data);
-      const registerData = {
-        email: data.email,
-        password: data.password,
-        password_confirm: data.passwordConfirm,
-        name: data.name,
-      };
-      //   // ('AuthService: Register data being sent:', registerData);
-      const response = await apiClient.register(registerData);
-      //   // ('AuthService: Signup response received:', response);
-
-      if (response.data) {
-        this.currentUser = response.data.user;
-        this.isAuthenticated = true;
-        // // ('AuthService: Signup successful, user set:', this.currentUser);
-        return response.data.user;
-      }
-
-      throw new Error('Registration failed');
-    } catch (error: any) {
-      console.error('AuthService: Signup error:', error);
-      throw new Error(error.message || 'Registration failed');
-    }
-  }
-
   async logout(): Promise<void> {
     try {
       await apiClient.logout();
@@ -157,7 +122,15 @@ class AuthService {
       }
       throw new Error('Failed to update profile');
     } catch (error: any) {
-      throw new Error(error.message || 'Failed to update profile');
+      // Surface backend field errors clearly
+      const parsed = error?.details?.parsedBody;
+      if (parsed?.name?.length) {
+        throw new Error('A user with this name already exists.');
+      }
+      if (parsed?.email?.length) {
+        throw new Error('A user with this email already exists.');
+      }
+      throw new Error(error?.message || 'Failed to update profile');
     }
   }
 
@@ -192,7 +165,15 @@ class AuthService {
         } as Partial<UserProfile>);
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Failed to update profile');
+      // Surface backend field errors clearly
+      const parsed = error?.details?.parsedBody;
+      if (parsed?.name?.length) {
+        throw new Error('A user with this name already exists.');
+      }
+      if (parsed?.email?.length) {
+        throw new Error('A user with this email already exists.');
+      }
+      throw new Error(error?.message || 'Failed to update profile');
     }
   }
 
@@ -247,6 +228,9 @@ class AuthService {
     try {
       // Ensure ApiClient is initialized before checking authentication
       await apiClient.waitForInitialization();
+
+      // Reload tokens from SecureStore in case they were updated externally
+      await apiClient.reloadTokens();
 
       if (apiClient.isAuthenticated()) {
         const response = await apiClient.get<UserProfile>(API_CONFIG.ENDPOINTS.PROFILE.GET);

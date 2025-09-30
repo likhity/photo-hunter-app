@@ -1,9 +1,8 @@
+import { useFonts } from 'expo-font';
 import { useEffect, useRef } from 'react';
-import { View, Image, Animated, Dimensions, StyleSheet } from 'react-native';
+import { View, Image, Animated, StyleSheet, Text } from 'react-native';
 
 import { useAnimation } from '~/providers/AnimationProvider';
-
-const { width, height } = Dimensions.get('window');
 
 interface AnimatedSplashScreenProps {
   onAnimationComplete: () => void;
@@ -11,57 +10,74 @@ interface AnimatedSplashScreenProps {
 
 export default function AnimatedSplashScreen({ onAnimationComplete }: AnimatedSplashScreenProps) {
   const { animationConfig } = useAnimation();
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [fontsLoaded] = useFonts({
+    'Poppins-Regular': require('~/assets/fonts/Poppins-Regular.ttf'),
+    'Poppins-Bold': require('~/assets/fonts/Poppins-Bold.ttf'),
+  });
+
+  const iconTranslateY = useRef(new Animated.Value(-30)).current;
+  const iconScale = useRef(new Animated.Value(0.8)).current;
+  const iconOpacity = useRef(new Animated.Value(0)).current;
   const whiteOverlayAnim = useRef(new Animated.Value(0)).current;
-  const rotationAnim = useRef(new Animated.Value(0)).current;
+  const screenFadeAnim = useRef(new Animated.Value(1)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const iconPushUp = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const { phases, iconScale } = animationConfig;
+    if (!fontsLoaded) return;
+
+    const { phases } = animationConfig;
 
     // Small delay to ensure navigation is ready
     const startDelay = setTimeout(() => {
-      // Create the animation sequence
+      // Create the animation sequence with overlapping phases
       const animationSequence = Animated.sequence([
-        // Phase 1: Icon appears and scales up
+        // Phase 1: Icon appears with spring animation
         Animated.parallel([
-          Animated.timing(scaleAnim, {
+          Animated.timing(iconOpacity, {
             toValue: 1,
-            duration: phases.iconAppear,
+            duration: 120,
             useNativeDriver: true,
           }),
-          Animated.timing(fadeAnim, {
+          Animated.spring(iconTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 6,
+            tension: 80,
+          }),
+          Animated.spring(iconScale, {
             toValue: 1,
-            duration: phases.iconAppear * 0.75,
+            useNativeDriver: true,
+            friction: 6,
+            tension: 80,
+          }),
+        ]),
+
+        // Phase 3: Title animates in parallel with icon push-up
+        Animated.parallel([
+          Animated.timing(titleOpacity, {
+            toValue: 1,
+            duration: phases.expand * 0.6,
             useNativeDriver: true,
           }),
-          // Optional: Add a subtle rotation
-          Animated.timing(rotationAnim, {
-            toValue: 1,
-            duration: phases.iconAppear,
+          Animated.timing(titleTranslateY, {
+            toValue: 0,
+            duration: phases.expand * 0.6,
+            useNativeDriver: true,
+          }),
+          Animated.timing(iconPushUp, {
+            toValue: -20,
+            duration: phases.expand * 0.6,
             useNativeDriver: true,
           }),
         ]),
 
-        // Phase 2: Hold the icon
+        // Phase 4: Hold the title and icon
         Animated.delay(phases.hold),
 
-        // Phase 3: Icon expands to fill screen with white overlay
-        Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: iconScale,
-            duration: phases.expand,
-            useNativeDriver: true,
-          }),
-          Animated.timing(whiteOverlayAnim, {
-            toValue: 1,
-            duration: phases.expand,
-            useNativeDriver: true,
-          }),
-        ]),
-
-        // Phase 4: Fade out
-        Animated.timing(fadeAnim, {
+        // Phase 5: Fade out entire screen
+        Animated.timing(screenFadeAnim, {
           toValue: 0,
           duration: phases.fadeOut,
           useNativeDriver: true,
@@ -75,16 +91,26 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: AnimatedSp
     }, 100); // Small delay to ensure navigation is ready
 
     return () => clearTimeout(startDelay);
-  }, [scaleAnim, fadeAnim, whiteOverlayAnim, rotationAnim, animationConfig, onAnimationComplete]);
+  }, [
+    fontsLoaded,
+    iconTranslateY,
+    iconScale,
+    iconOpacity,
+    whiteOverlayAnim,
+    screenFadeAnim,
+    titleOpacity,
+    titleTranslateY,
+    iconPushUp,
+    animationConfig,
+    onAnimationComplete,
+  ]);
 
-  // Create rotation interpolation
-  const rotation = rotationAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: screenFadeAnim }]}>
       {/* Red background */}
       <View style={styles.background} />
 
@@ -93,8 +119,11 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: AnimatedSp
         style={[
           styles.iconContainer,
           {
-            transform: [{ scale: scaleAnim }, { rotate: rotation }],
-            opacity: fadeAnim,
+            opacity: iconOpacity,
+            transform: [
+              { translateY: Animated.add(iconTranslateY, iconPushUp) },
+              { scale: iconScale },
+            ],
           },
         ]}>
         <Image
@@ -104,16 +133,31 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: AnimatedSp
         />
       </Animated.View>
 
-      {/* White overlay */}
+      {/* Animated title */}
       <Animated.View
         style={[
-          styles.whiteOverlay,
+          styles.titleContainer,
+          {
+            opacity: titleOpacity,
+            transform: [{ translateY: titleTranslateY }],
+          },
+        ]}>
+        <Text style={styles.title}>
+          <Text style={styles.titleBlack}>Photo</Text>
+          <Text style={styles.titleRed}>Hunter</Text>
+        </Text>
+      </Animated.View>
+
+      {/* Transparent overlay */}
+      <Animated.View
+        style={[
+          styles.transparentOverlay,
           {
             opacity: whiteOverlayAnim,
           },
         ]}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -151,12 +195,32 @@ const styles = StyleSheet.create({
     height: 80,
     tintColor: '#FFFFFF',
   },
-  whiteOverlay: {
+  titleContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    marginTop: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 32,
+  },
+  titleBlack: {
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+  },
+  titleRed: {
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+  },
+  transparentOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
 });

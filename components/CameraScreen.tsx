@@ -18,11 +18,19 @@ interface CameraScreenProps {
   onPhotoTaken: (photoUri: string) => void;
   onClose: () => void;
   photoHuntName: string;
+  onPhotoOrientation?: (orientation: 'portrait' | 'landscape') => void;
+  forcedOrientation?: 'portrait' | 'landscape';
 }
 
 const { width, height } = Dimensions.get('window');
 
-export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: CameraScreenProps) {
+export default function CameraScreen({
+  onPhotoTaken,
+  onClose,
+  photoHuntName,
+  onPhotoOrientation,
+  forcedOrientation,
+}: CameraScreenProps) {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
@@ -36,8 +44,14 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
 
     const subscribe = async () => {
       try {
-        // Allow all but do not lock; we only listen and adapt UI
-        await ScreenOrientation.unlockAsync();
+        // Apply forced orientation if provided, otherwise unlock
+        if (forcedOrientation === 'portrait') {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+        } else if (forcedOrientation === 'landscape') {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        } else {
+          await ScreenOrientation.unlockAsync();
+        }
 
         const current = await ScreenOrientation.getOrientationAsync();
         setIsLandscape(
@@ -72,11 +86,13 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
     subscribe();
 
     return () => {
+      // Unlock when unmounting camera screen
+      ScreenOrientation.unlockAsync().catch(() => {});
       if (subscription) {
         ScreenOrientation.removeOrientationChangeListener(subscription);
       }
     };
-  }, []);
+  }, [forcedOrientation]);
 
   useEffect(() => {
     (async () => {
@@ -138,6 +154,9 @@ export default function CameraScreen({ onPhotoTaken, onClose, photoHuntName }: C
 
   const confirmPhoto = () => {
     if (capturedPhoto) {
+      if (onPhotoOrientation) {
+        onPhotoOrientation(isLandscape ? 'landscape' : 'portrait');
+      }
       onPhotoTaken(capturedPhoto);
     }
   };
@@ -275,14 +294,13 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   closeButton: {
-    width: 40,
-    height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
+    fontFamily: 'Sen',
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',

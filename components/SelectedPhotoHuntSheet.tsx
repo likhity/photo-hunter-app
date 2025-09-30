@@ -29,17 +29,25 @@ export default function SelectedPhotoHuntSheet() {
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string>('');
   const [showHint, setShowHint] = useState(false);
   const [showPublicProfile, setShowPublicProfile] = useState(false);
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
 
   useEffect(() => {
     if (selectedPhotoHunt) {
+      setIsSheetVisible(true);
       calculateDistanceToPhotoHunt();
+    } else {
+      setIsSheetVisible(false);
+    }
+  }, [selectedPhotoHunt]);
+
+  useEffect(() => {
+    if (isSheetVisible && bottomSheetRef.current) {
+      // Use a small delay to ensure the component is fully mounted
       setTimeout(() => {
         bottomSheetRef.current?.snapToIndex(0);
       }, 50);
-    } else {
-      bottomSheetRef.current?.close();
     }
-  }, [selectedPhotoHunt]);
+  }, [isSheetVisible, selectedPhotoHunt]);
 
   const calculateDistanceToPhotoHunt = async () => {
     if (!selectedPhotoHunt) return;
@@ -159,6 +167,7 @@ export default function SelectedPhotoHuntSheet() {
         onPhotoTaken={handlePhotoTaken}
         onClose={handleCloseCamera}
         photoHuntName={selectedPhotoHunt.name}
+        forcedOrientation={selectedPhotoHunt.orientation}
       />
     );
   }
@@ -176,7 +185,14 @@ export default function SelectedPhotoHuntSheet() {
     );
   }
 
-  if (!selectedPhotoHunt) {
+  const handleSheetChange = (index: number) => {
+    if (index === -1) {
+      setIsSheetVisible(false);
+      setSelectedPhotoHunt(null);
+    }
+  };
+
+  if (!selectedPhotoHunt || !isSheetVisible) {
     return null;
   }
 
@@ -199,9 +215,7 @@ export default function SelectedPhotoHuntSheet() {
         enablePanDownToClose
         backgroundStyle={[styles.bottomSheetBackground, { backgroundColor }]}
         handleIndicatorStyle={styles.handleIndicator}
-        onClose={() => {
-          setSelectedPhotoHunt(null);
-        }}>
+        onChange={handleSheetChange}>
         {selectedPhotoHunt && (
           <BottomSheetScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             {/* Header with distance */}
@@ -210,14 +224,33 @@ export default function SelectedPhotoHuntSheet() {
                 <Text style={styles.title}>{selectedPhotoHunt.name}</Text>
                 <Text style={styles.description}>{selectedPhotoHunt.description}</Text>
               </View>
-              <View style={styles.distanceContainer}>
-                <MaterialIcons
-                  name="location-on"
-                  size={16}
-                  color="white"
-                  style={styles.distanceIcon}
-                />
-                <Text style={styles.distance}>{distance}</Text>
+              <View>
+                <View style={styles.distanceContainer}>
+                  <MaterialIcons
+                    name="location-on"
+                    size={16}
+                    color="white"
+                    style={styles.distanceIcon}
+                  />
+                  <Text style={styles.distance}>{distance}</Text>
+                </View>
+                {/* Orientation indicator under distance */}
+                {selectedPhotoHunt.orientation && (
+                  <View style={styles.orientationContainer}>
+                    <MaterialIcons
+                      name={
+                        selectedPhotoHunt.orientation === 'landscape'
+                          ? 'stay-current-landscape'
+                          : 'stay-current-portrait'
+                      }
+                      size={18}
+                      color="white"
+                    />
+                    <Text style={styles.orientationText}>
+                      {selectedPhotoHunt.orientation === 'landscape' ? 'Landscape' : 'Portrait'}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -392,6 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-end',
   },
   distanceIcon: {
     marginRight: 4,
@@ -401,6 +435,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Sen',
     fontWeight: '600',
     color: 'white',
+  },
+  orientationContainer: {
+    marginTop: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    justifyContent: 'flex-end',
+  },
+  orientationText: {
+    fontSize: 12,
+    fontFamily: 'Sen',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   navigationSection: {
     marginBottom: 20,
@@ -442,7 +488,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     minHeight: 56,
     width: 'auto',
-    marginBottom: 20,
+    marginBottom: 50,
   },
   actionButtonContent: {
     flexDirection: 'row',

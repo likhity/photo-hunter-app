@@ -15,7 +15,6 @@ export const API_CONFIG = {
     // Authentication
     AUTH: {
       LOGIN: '/auth/login/',
-      REGISTER: '/auth/register/',
       LOGOUT: '/auth/logout/',
       REFRESH: '/auth/token/refresh/',
     },
@@ -61,7 +60,7 @@ export const API_CONFIG = {
 
   // Image upload configuration
   UPLOAD: {
-    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+    MAX_FILE_SIZE: 500 * 1024, // 500KB
     ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
     COMPRESSION_QUALITY: 0.8,
   },
